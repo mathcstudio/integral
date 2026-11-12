@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>정적분 탐구실</title>
+<style>
+:root{
+  --bg:#f5f7fb; --panel:#ffffff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+  --blue:#2563eb; --blue-soft:rgba(37,99,235,.28); --red:#dc2626; --red-soft:rgba(220,38,38,.25);
+  --green:#059669; --amber:#d97706; --accent:#7c3aed;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Pretendard","Malgun Gothic","Apple SD Gothic Neo",sans-serif;background:var(--bg);color:var(--ink)}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:#1e293b;color:#fff}
+header h1{font-size:20px;margin:0}
+header .sub{font-size:13px;opacity:.75;margin-left:10px}
+.hbtns{display:flex;gap:8px;align-items:center}
+.badge{font-size:12px;padding:4px 10px;border-radius:99px;background:#334155}
+.badge.on{background:var(--green)}
+button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;padding:8px 14px;font-size:14px;background:var(--blue);color:#fff}
+button.ghost{background:transparent;border:1px solid #cbd5e1;color:inherit}
+header button.ghost{border-color:#64748b;color:#fff}
+button.sec{background:#e0e7ff;color:#3730a3}
+button:disabled{opacity:.45;cursor:not-allowed}
+main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr);gap:16px;padding:16px;max-width:1400px;margin:0 auto}
+@media (max-width:700px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px}
+#graphWrap{position:relative}
+canvas{width:100%;height:auto;display:block;border-radius:10px;background:#fff;border:1px solid var(--line)}
+.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;margin-top:14px}
+@media (max-width:600px){.controls{grid-template-columns:1fr}}
+.ctrl label{font-size:13px;color:var(--muted);display:flex;justify-content:space-between}
+.ctrl label b{color:var(--ink)}
+.ctrl input[type=range]{width:100%}
+select{font-family:inherit;font-size:14px;padding:6px 8px;border-radius:8px;border:1px solid #cbd5e1;width:100%}
+.readout{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.chip{background:#f1f5f9;border-radius:10px;padding:8px 12px;font-size:14px}
+.chip .k{color:var(--muted);font-size:12px;display:block}
+.chip .v{font-weight:700;font-size:17px;font-variant-numeric:tabular-nums}
+.chip.locked .v{color:#94a3b8}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.formula{font-family:"Cambria Math","Times New Roman",serif;font-size:17px}
+.int{font-size:1.5em;vertical-align:-.15em}
+.lim{display:inline-flex;flex-direction:column;font-size:.65em;vertical-align:middle;line-height:1.1;margin-left:-2px;margin-right:2px}
+.progress{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.dot{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;background:#e5e7eb;color:#475569;cursor:pointer;border:2px solid transparent}
+.dot.done{background:var(--green);color:#fff}
+.dot.cur{border-color:var(--accent)}
+.dot.lock{cursor:not-allowed;opacity:.5}
+.mtitle{font-size:18px;font-weight:700;margin:4px 0 8px}
+.story{line-height:1.7;font-size:15px}
+.story .tip{background:#fef3c7;border-radius:8px;padding:6px 10px;font-size:13.5px;margin-top:8px}
+.qbox{margin-top:12px;padding:12px;background:#f8fafc;border-radius:10px;border:1px solid var(--line)}
+.qbox .q{font-weight:700;margin-bottom:8px;line-height:1.6}
+.opt{display:block;width:100%;text-align:left;margin:6px 0;background:#fff;color:var(--ink);border:1px solid #cbd5e1}
+.opt.sel{border-color:var(--blue);background:#eff6ff}
+input[type=text],input[type=password],textarea{font-family:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid #cbd5e1;width:100%}
+textarea{min-height:90px;resize:vertical}
+.fb{margin-top:12px;padding:10px 12px;border-radius:10px;line-height:1.6;font-size:14.5px;display:none}
+.fb.show{display:block}
+.fb.good{background:#ecfdf5;border-left:4px solid var(--green)}
+.fb.bad{background:#fff7ed;border-left:4px solid var(--amber)}
+.fb.info{background:#eef2ff;border-left:4px solid var(--accent)}
+.hintline{font-size:13px;color:var(--muted);margin-top:6px}
+.chat{margin-top:16px}
+.chat h3{font-size:15px;margin:0 0 8px}
+#chatLog{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.msg{padding:8px 11px;border-radius:12px;font-size:14px;line-height:1.55;max-width:90%;white-space:pre-wrap}
+.msg.me{align-self:flex-end;background:#dbeafe}
+.msg.ai{align-self:flex-start;background:#f3f4f6}
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:440px}
+.modal h2{margin:0 0 12px;font-size:18px}
+.modal .field{margin:10px 0}
+.modal .field label{font-size:13px;color:var(--muted);display:block;margin-bottom:4px}
+.small{font-size:12.5px;color:var(--muted);line-height:1.5}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #c7d2fe;border-top-color:var(--accent);border-radius:50%;animation:sp 0.8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* 슬라이더: 손가락으로 잡기 쉽게 */
+input[type=range]{height:30px;accent-color:var(--blue)}
+/* 터치 화면(태블릿)에서 버튼·입력칸을 크게 */
+@media (pointer:coarse), (max-width:1100px) and (hover:none){
+  button{padding:11px 16px;font-size:15px;min-height:44px}
+  select,input[type=text],input[type=password]{min-height:44px;font-size:16px}
+  input[type=checkbox]{width:22px;height:22px;vertical-align:-5px}
+  input[type=range]{height:40px}
+  .dot{width:38px;height:38px;font-size:15px}
+  .opt{padding:12px 14px}
+  #golfApp button{padding:11px 16px;font-size:15px;min-height:44px}
+}
+/* 태블릿 세로 화면: 두 칸 배치를 유지하되 여백을 줄여요 */
+@media (max-width:900px){
+  main{padding:10px;gap:10px}
+  .card{padding:12px}
+  header .sub{display:none}
+}
+/* ---- 사용 안내 투어 (스포트라이트 + 안내 카드) ---- */
+.tour-block{position:fixed;inset:0;z-index:100;display:none;background:transparent}
+.tour-block.show{display:block}
+.tour-block.dim{background:rgba(15,23,42,.62)}
+.tour-spot{position:fixed;z-index:101;border-radius:12px;pointer-events:none;display:none;
+  box-shadow:0 0 0 3px #a78bfa,0 0 0 9999px rgba(15,23,42,.62);transition:left .25s,top .25s,width .25s,height .25s}
+.tour-card{position:fixed;z-index:102;width:min(370px,calc(100vw - 24px));background:#fff;color:#1f2937;border-radius:14px;
+  box-shadow:0 14px 36px rgba(0,0,0,.28);padding:14px 16px 14px;display:none;transition:left .25s,top .25s}
+.tour-card.show{display:block}
+.tc-top{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:#6b7280}
+.tour-card button.tc-x{background:none;color:#6b7280;font-size:22px;line-height:1;padding:0 4px;min-height:0}
+.tc-prog{display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280;margin:6px 0 2px}
+.tc-bar{flex:1;height:4px;background:#e5e7eb;border-radius:4px;overflow:hidden}
+.tc-bar i{display:block;height:100%;background:#7c3aed;transition:width .25s}
+.tour-card h3{margin:8px 0 6px;font-size:17px}
+.tc-body{font-size:14.5px;line-height:1.65;color:#374151}
+.tc-foot{display:flex;gap:8px;align-items:center;margin-top:14px}
+.tour-card button.tc-skip{background:none;color:#6b7280;text-decoration:underline;padding:6px 2px}
+.tour-card button.tc-prev{background:#fff;color:#374151;border:1px solid #d1d5db}
+.tour-card button.tc-next{background:#7c3aed;color:#fff}
+
+/* ---- 보너스 게임: 정적분 골프 (모든 규칙은 #golfApp 안에서만 적용) ---- */
+#golfApp{--bg:#ecfdf5;--panel:#fff;--ink:#1f2937;--muted:#6b7280;--line:#e5e7eb;--grass:#16a34a;--grass-d:#166534;--blue:#2563eb;--red:#dc2626;--gold:#f59e0b;--accent:#7c3aed;
+  position:fixed;inset:0;z-index:40;overflow-y:auto;display:none;background:var(--bg);color:var(--ink)}
+#golfApp.show{display:block}
+#golfApp header{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;background:var(--grass-d);color:#fff;flex-wrap:wrap;gap:8px}
+#golfApp header h1{font-size:20px;margin:0}
+#golfApp header button.gback{border:1px solid #bbf7d0;color:#fff;background:transparent}
+#golfApp .hstat{display:flex;gap:14px;font-size:14px}
+#golfApp .hstat b{font-size:18px}
+#golfApp main{max-width:1100px;margin:0 auto;padding:16px;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
+@media(max-width:860px){#golfApp main{grid-template-columns:1fr}}
+#golfApp .card{background:var(--panel);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:16px}
+#golfApp .mission{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+#golfApp .hole{background:var(--grass);color:#fff;border-radius:10px;padding:6px 12px;font-weight:700}
+#golfApp .target{font-family:"Cambria Math","Times New Roman",serif;font-size:22px}
+#golfApp .int{font-size:1.5em;vertical-align:-.15em}
+#golfApp .lim{display:inline-flex;flex-direction:column;font-size:.6em;vertical-align:middle;line-height:1.1;margin:0 2px 0 -2px}
+#golfApp .par{font-size:13px;color:var(--muted)}
+#golfApp canvas{width:100%;display:block;border-radius:10px;border:1px solid var(--line);touch-action:none;height:auto}
+#golfApp #g_cv{cursor:ew-resize;background:#fff}
+#golfApp #g_course{margin-top:10px;background:linear-gradient(#bbf7d0,#86efac)}
+#golfApp .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+#golfApp button{font-family:inherit;cursor:pointer;border:none;border-radius:8px;padding:8px 14px;font-size:14px;background:var(--grass);color:#fff}
+#golfApp button.ghost{background:transparent;border:1px solid #cbd5e1;color:var(--ink)}
+#golfApp button:disabled{opacity:.45;cursor:not-allowed}
+#golfApp .msg{margin-top:10px;padding:10px 12px;border-radius:10px;background:#f1f5f9;line-height:1.6;font-size:15px;min-height:46px;max-width:none;white-space:normal;align-self:auto}
+#golfApp .msg.good{background:#fef9c3;border-left:4px solid var(--gold)}
+#golfApp .msg.near{background:#ecfdf5;border-left:4px solid var(--grass)}
+#golfApp .msg.far{background:#fff7ed;border-left:4px solid #ea580c}
+#golfApp .small{font-size:12.5px;color:var(--muted);line-height:1.5}
+#golfApp table{width:100%;border-collapse:collapse;font-size:13px;text-align:center}
+#golfApp th,#golfApp td{border:1px solid var(--line);padding:4px 2px}
+#golfApp th{background:#f0fdf4}
+#golfApp td.cur{background:#fef9c3;font-weight:700}
+#golfApp .howto{line-height:1.7;font-size:14px}
+#golfApp .howto li{margin-bottom:4px}
+#golfApp .over{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;align-items:center;justify-content:center;z-index:45;padding:16px}
+#golfApp .over.show{display:flex}
+#golfApp .pop{background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;text-align:center}
+#golfApp .pop .big{font-size:40px;margin:6px 0}
+#golfApp .pop h2{margin:4px 0 8px}
+#golfApp .gintro{min-height:560px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;padding:24px 8px;border-radius:12px;background:radial-gradient(circle at 50% 35%,#f0fdf4,#fff 70%)}
+#golfApp .gi-hole{background:var(--grass);color:#fff;border-radius:99px;padding:6px 16px;font-weight:700;letter-spacing:.5px}
+#golfApp .gi-formula{font-family:"Cambria Math","Times New Roman",serif;font-size:clamp(34px,7vw,64px);line-height:1.2;color:#0f172a}
+#golfApp .gi-formula .lim{font-size:.5em}
+#golfApp .bmark{color:#d97706}
+#golfApp .gi-q{font-size:19px}
+#golfApp .gi-parts{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+#golfApp .gi-parts span{background:#f1f5f9;border-radius:10px;padding:8px 14px;font-size:15px}
+#golfApp .gi-parts span.q{background:#fef3c7;font-weight:700}
+#golfApp .gi-warn{font-size:14.5px;color:#b45309;background:#fff7ed;border-radius:10px;padding:6px 12px}
+#golfApp .gi-warn:empty{display:none}
+#golfApp .gi-guess{font-size:15px;color:var(--muted)}
+#golfApp .gi-guess input{width:80px;font-size:16px;padding:6px 8px;border:1px solid #cbd5e1;border-radius:8px;text-align:center;font-family:inherit}
+#golfApp button.gi-start{font-size:18px;padding:12px 28px;border-radius:12px}
+</style>
+</head>
+<body>
+<header>
+  <div><h1 style="display:inline">∫ 정적분 탐구실</h1><span class="sub">직사각형을 쪼개며 정적분의 뜻을 찾아가요</span></div>
+  <div class="hbtns">
+    <button id="tourBtn" class="ghost" title="기능 안내를 다시 봐요">ⓘ 사용 안내</button>
+    <button id="golfBtn" class="ghost" title="8단계를 모두 마치면 열려요">🔒 보너스 게임</button>
+    <span id="aiBadge" class="badge">AI 피드백 꺼짐</span>
+    <button class="ghost" id="adminBtn" title="관리자 모드">⚙ 관리자</button>
+  </div>
+</header>
+
+<main>
+  <!-- 왼쪽: 그래프 -->
+  <section class="card">
+    <div id="graphWrap"><canvas id="cv" width="900" height="560"></canvas></div>
+    <div class="legend">
+      <span><i style="background:var(--blue-soft);border:1px solid var(--blue)"></i>x축 위 직사각형 (f(x) &gt; 0)</span>
+      <span><i style="background:var(--red-soft);border:1px solid var(--red)"></i>x축 아래 직사각형 (f(x) &lt; 0)</span>
+      <span><i style="background:rgba(124,58,237,.18)"></i>실제 영역</span>
+    </div>
+    <div class="controls">
+      <div class="ctrl"><label>함수 <b id="fLabel"></b></label>
+        <select id="fSel"></select></div>
+      <div class="ctrl"><label>직사각형 높이를 정하는 점</label>
+        <select id="mSel">
+          <option value="right">오른쪽 끝점</option>
+          <option value="left">왼쪽 끝점</option>
+          <option value="mid">가운데 점</option>
+        </select></div>
+      <div class="ctrl"><label>시작 a <b id="aVal"></b></label>
+        <input type="range" id="aRng" min="-3" max="3" step="0.5"></div>
+      <div class="ctrl"><label>끝 b <b id="bVal"></b></label>
+        <input type="range" id="bRng" min="-3" max="3" step="0.5"></div>
+      <div class="ctrl" style="grid-column:1/-1"><label>직사각형 개수 n <b id="nVal"></b></label>
+        <input type="range" id="nRng" min="1" max="200" step="1"></div>
+    </div>
+    <div class="row">
+      <button class="sec" id="animBtn">▶ n을 점점 늘려보기</button>
+      <label class="small"><input type="checkbox" id="showArea"> 실제 영역 색칠</label>
+    </div>
+    <div class="readout">
+      <div class="chip"><span class="k">한 직사각형의 가로 Δx = (b − a) ÷ n</span><span class="v" id="dxOut"></span></div>
+      <div class="chip"><span class="k">직사각형 넓이의 합 S<sub>n</sub></span><span class="v" id="sOut"></span></div>
+      <div class="chip locked" id="exactChip"><span class="k">정적분 값 (참값)</span><span class="v" id="exOut">🔒 탐구 3단계 후 공개</span></div>
+    </div>
+    <div class="row formula" id="formulaRow"></div>
+  </section>
+
+  <!-- 오른쪽: 탐구 -->
+  <section class="card">
+    <div class="progress" id="prog"></div>
+    <div id="mission"></div>
+
+    <div class="chat card" id="chatCard" style="box-shadow:none;border:1px solid var(--line);display:none">
+      <h3>🤖 AI 도우미에게 물어보기 <span class="small">(정답 대신 생각할 실마리를 줘요)</span></h3>
+      <div id="chatLog"></div>
+      <div class="row" style="flex-wrap:nowrap">
+        <input type="text" id="chatIn" placeholder="예: Δx가 왜 작아져야 해요?">
+        <button id="chatSend">보내기</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- 보너스 게임: 정적분 골프 -->
+<div id="golfApp">
+<header>
+  <div style="display:flex;align-items:center;gap:10px"><button class="ghost gback" id="g_back">← 탐구실로</button><h1>⛳ 정적분 골프</h1><button class="ghost gback" id="g_tour">ⓘ 안내</button></div>
+  <div class="hstat"><span>홀 <b id="g_hHole">1</b>/9</span><span>이번 홀 타수 <b id="g_hStroke">0</b></span><span>총점 <b id="g_hTotal">E</b></span></div>
+</header>
+
+<main>
+  <section class="card">
+    <div id="g_intro" class="gintro">
+      <div class="gi-hole" id="g_iHole">HOLE 1 · 기준 타수 2</div>
+      <div class="gi-formula" id="g_iFormula"></div>
+      <div class="gi-q">이 식이 성립하려면 <b class="bmark">b</b>는 얼마여야 할까요?</div>
+      <div class="gi-parts" id="g_iParts"></div>
+      <div class="gi-warn" id="g_iWarn"></div>
+      <div class="gi-guess">✏ 먼저 예상해 보기 (선택): b ≈ <input type="text" id="g_iGuess" inputmode="decimal" placeholder="?"></div>
+      <button id="g_iStart" class="gi-start">🏌️ 코스로 나가기</button>
+    </div>
+    <div id="g_play" style="display:none">
+    <div class="mission">
+      <span class="hole" id="g_holeTag">HOLE 1</span>
+      <span class="target" id="g_targetTxt"></span>
+      <span class="par" id="g_parTxt"></span>
+    </div>
+    <canvas id="g_cv" width="900" height="460"></canvas>
+    <canvas id="g_course" width="900" height="130"></canvas>
+    <div class="row">
+      <label class="small" style="flex:1;min-width:220px">끝점 b <b id="g_bTxt"></b>
+        <input type="range" id="g_bRng" style="width:100%" step="0.05"></label>
+      <button class="ghost" id="g_hintBtn">💡 캐디의 조언 (+1타)</button>
+    </div>
+    <div class="msg" id="g_msg"></div>
+    <div class="row">
+      <button id="g_nextBtn" style="display:none">다음 홀 ▶</button>
+    </div>
+    </div>
+  </section>
+
+  <aside>
+    <div class="card howto">
+      <b>🏌️ 경기 방법</b>
+      <ol style="padding-left:18px;margin:8px 0">
+        <li>그래프를 <b>좌우로 끌어</b> 끝점 b를 정해요. 색칠된 넓이가 바뀌어요.</li>
+        <li>손을 떼면 <b>샷!</b> 정적분 값만큼 공이 날아가요.</li>
+        <li>공이 <b>깃발(목표값)</b>에 들어가면 성공!</li>
+        <li>끄는 동안에는 값이 안 보여요. <b>모눈 한 칸 = 넓이 1</b>로 어림해 보세요.</li>
+        <li>x축 <b>아래</b> 넓이는 공을 <b>뒤로</b> 보내요.</li>
+      </ol>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <b>📋 스코어카드</b>
+      <table style="margin-top:8px" id="g_score"></table>
+      <p class="small" style="margin:8px 0 0">표의 숫자는 타수예요. 총점의 −는 기준 타수보다 적게, +는 많게 친 거예요.</p>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <b>🗺 코스 번호 <span id="g_code" style="color:var(--grass);font-size:20px"></span></b>
+      <p class="small" style="margin:6px 0">문제 은행 <span id="g_bankSize"></span>문제 중 9문제를 무작위로 뽑았어요. 같은 번호를 입력하면 친구와 같은 코스로 대결할 수 있어요.</p>
+      <div class="row" style="margin-top:6px">
+        <button id="g_newCourse">🔀 새 코스</button>
+        <button class="ghost" id="g_enterCode">🔢 번호 입력</button>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<div class="over" id="g_over"><div class="pop" id="g_pop"></div></div>
+
+</div>
+
+<!-- 관리자 모달 -->
+<div class="modal-bg" id="adminModal">
+  <div class="modal">
+    <div id="pinStep">
+      <h2>🔐 관리자 확인</h2>
+      <div class="field"><label>관리자 PIN (처음 설정값: 1234)</label>
+        <input type="password" id="pinIn" inputmode="numeric" autocomplete="current-password"></div>
+      <div class="row"><button id="pinOk">확인</button><button class="ghost" data-close>취소</button></div>
+      <div class="small" id="srvInfo" style="margin-top:8px"></div>
+      <div class="small" id="pinMsg" style="color:var(--red)"></div>
+    </div>
+    <div id="cfgStep" style="display:none;max-height:80vh;overflow-y:auto">
+      <h2>⚙ 관리자 설정</h2>
+      <div class="small" id="pinWarn" style="display:none;background:#fef3c7;border-radius:8px;padding:8px 10px;color:#92400e;margin-bottom:8px">⚠ 아직 처음 설정값 PIN(1234)을 쓰고 있어요. 아래에서 새 PIN을 꼭 정해 주세요.</div>
+      <div class="field"><label>Gemini API Key <span id="keyState"></span></label>
+        <div class="row" style="margin:0;flex-wrap:nowrap"><input type="password" id="keyIn" placeholder="바꿀 때만 입력 (AIza...)" autocomplete="off"><button class="ghost" id="keyShow">보기</button></div>
+        <div class="small" style="margin-top:4px">키는 구글 앱스크립트 서버에만 저장되고, 이 화면에도 다시 표시되지 않아요.</div></div>
+      <div class="field"><label>사용할 모델</label>
+        <div class="row" style="margin:0;flex-wrap:nowrap"><select id="modelIn"></select><button class="ghost" id="modelLoad" style="white-space:nowrap">목록 불러오기</button></div>
+        <div class="small" id="modelDesc" style="margin-top:4px"></div></div>
+      <div class="field"><label><input type="checkbox" id="aiOn"> 학생에게 AI 피드백·AI 도우미 켜기</label></div>
+      <div class="field"><label>사용량 제한 (반 전체 합계)</label>
+        <div class="row" style="margin:0">1분에 <input type="text" id="perMin" inputmode="numeric" style="width:70px"> 회 · 하루 <input type="text" id="perDay" inputmode="numeric" style="width:80px"> 회</div>
+        <div class="small" id="usage" style="margin-top:4px"></div></div>
+      <div class="field"><label>새 관리자 PIN (바꿀 때만 입력, 4자리 이상)</label>
+        <input type="password" id="newPin" autocomplete="new-password"></div>
+      <div class="row">
+        <button id="cfgSave">저장</button>
+        <button class="sec" id="cfgTest">연결 테스트</button>
+        <button class="ghost" id="cfgClear">키 삭제</button>
+        <button class="ghost" id="cfgLogout">로그아웃</button>
+        <button class="ghost" data-close>닫기</button>
+      </div>
+      <div class="small" id="cfgMsg" style="margin-top:8px"></div>
+      <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
+      <div class="row" style="margin:0"><button class="ghost" id="resetProg">이 기기의 학생 진행 상황 초기화</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ====================== 함수 정의 ====================== */
+const FUNCS = [
+  {id:'lin',  label:'f(x) = x',          f:x=>x},
+  {id:'sq',   label:'f(x) = x²',         f:x=>x*x},
+  {id:'const',label:'f(x) = 2',          f:x=>2},
+  {id:'dec',  label:'f(x) = −x + 1',     f:x=>-x+1},
+  {id:'sq1',  label:'f(x) = x² − 1',     f:x=>x*x-1},
+  {id:'cub',  label:'f(x) = x³ ÷ 4',     f:x=>x*x*x/4},
+  {id:'sqrt', label:'f(x) = √x  (x ≥ 0)',f:x=>x>=0?Math.sqrt(x):NaN},
+];
+const S = {fi:1, a:0, b:1, n:4, method:'right', showArea:false, maxN:4, exactUnlocked:false};
+
+const $ = id=>document.getElementById(id);
+const fmt = (v,d=4)=> (Math.abs(v)<1e-10?0:v).toFixed(d).replace(/\.?0+$/,'') || '0';
+
+function curF(){return FUNCS[S.fi].f}
+function riemann(){
+  const f=curF(), {a,b,n,method}=S, dx=(b-a)/n; let s=0; const rects=[];
+  for(let k=0;k<n;k++){
+    const x0=a+k*dx, x1=x0+dx;
+    const xs = method==='left'?x0: method==='right'?x1:(x0+x1)/2;
+    const h=f(xs); if(isFinite(h)){ s+=h*dx; rects.push([x0,x1,h,xs]); }
+  }
+  return {dx,s,rects};
+}
+function exact(){ // 심프슨 공식 (충분히 정밀)
+  const f=curF(), {a,b}=S; if(a===b) return 0;
+  const N=2000, h=(b-a)/N; let s=f(a)+f(b);
+  for(let i=1;i<N;i++) s+= f(a+i*h)*(i%2?4:2);
+  return s*h/3;
+}
+
+/* ====================== 그리기 ====================== */
+const cv=$('cv'), ctx=cv.getContext('2d');
+/* 캔버스를 실제 화면 크기(고해상도 포함)에 맞춰요 → 태블릿에서도 글자가 작아지지 않고 선명하게 보여요. */
+function fitCanvas(c, ratio, fixedH, minH, maxH){
+  const dpr=window.devicePixelRatio||1;
+  const w=c.clientWidth||c._w||900;
+  const h=fixedH||Math.max(minH||0,Math.min(maxH||1e9,Math.round(w*ratio)));
+  if(c._w!==w||c._h!==h||c._dpr!==dpr){c._w=w;c._h=h;c._dpr=dpr;c.width=Math.round(w*dpr);c.height=Math.round(h*dpr);c.style.height=h+'px';}
+  c.getContext('2d').setTransform(dpr,0,0,dpr,0,0);
+}
+function niceStep(range){const r=range/8,p=Math.pow(10,Math.floor(Math.log10(r))),m=r/p;return (m<1.5?1:m<3?2:m<7?5:10)*p}
+function draw(){
+  fitCanvas(cv,0.62,0,250,Math.round(innerHeight*0.34));
+  const W=cv._w,H=cv._h,f=curF();
+  const lo=Math.min(S.a,S.b), hi=Math.max(S.a,S.b), pad=Math.max(0.6,(hi-lo)*0.25);
+  let xmin=lo-pad, xmax=hi+pad; if(xmax-xmin<1.5){const c=(xmin+xmax)/2;xmin=c-.75;xmax=c+.75}
+  let ymin=0,ymax=0;
+  for(let i=0;i<=300;i++){const y=f(xmin+(xmax-xmin)*i/300); if(isFinite(y)){ymin=Math.min(ymin,y);ymax=Math.max(ymax,y)}}
+  if(ymax-ymin<1){ymax+=0.5;ymin-=0.5}
+  const yp=(ymax-ymin)*0.12; ymin-=yp; ymax+=yp;
+  const L=50,R=20,T=20,B=40;
+  const X=x=>L+(x-xmin)/(xmax-xmin)*(W-L-R), Y=y=>T+(ymax-y)/(ymax-ymin)*(H-T-B);
+  ctx.clearRect(0,0,W,H);
+  // 격자
+  ctx.font='15px sans-serif'; ctx.lineWidth=1;
+  const sx=niceStep(xmax-xmin), sy=niceStep(ymax-ymin);
+  ctx.strokeStyle='#eef2f7'; ctx.fillStyle='#64748b';
+  for(let x=Math.ceil(xmin/sx)*sx;x<=xmax;x+=sx){ctx.beginPath();ctx.moveTo(X(x),T);ctx.lineTo(X(x),H-B);ctx.stroke();
+    ctx.textAlign='center';ctx.fillText(fmt(x,2),X(x),Math.min(H-B+20,Math.max(T+14,Y(0)+20)));}
+  for(let y=Math.ceil(ymin/sy)*sy;y<=ymax;y+=sy){ctx.beginPath();ctx.moveTo(L,Y(y));ctx.lineTo(W-R,Y(y));ctx.stroke();
+    if(Math.abs(y)>1e-9){ctx.textAlign='right';ctx.fillText(fmt(y,2),Math.max(L-6,Math.min(W-R,X(0)-6)),Y(y)+5);}}
+  // 실제 영역
+  if(S.showArea && S.a!==S.b){
+    ctx.fillStyle='rgba(124,58,237,.18)'; ctx.beginPath(); ctx.moveTo(X(S.a),Y(0));
+    for(let i=0;i<=200;i++){const x=S.a+(S.b-S.a)*i/200,y=f(x); if(isFinite(y)) ctx.lineTo(X(x),Y(y));}
+    ctx.lineTo(X(S.b),Y(0)); ctx.closePath(); ctx.fill();
+  }
+  // 직사각형
+  const {rects}=riemann();
+  for(const [x0,x1,h,xs] of rects){
+    const pos=h>=0;
+    ctx.fillStyle=pos?'rgba(37,99,235,.28)':'rgba(220,38,38,.25)';
+    ctx.strokeStyle=pos?'#2563eb':'#dc2626'; ctx.lineWidth=S.n>80?0.5:1.2;
+    const rx=X(Math.min(x0,x1)), rw=Math.abs(X(x1)-X(x0)), ry=Y(Math.max(h,0)), rh=Math.abs(Y(h)-Y(0));
+    ctx.fillRect(rx,ry,rw,rh); if(S.n<=120) ctx.strokeRect(rx,ry,rw,rh);
+    if(S.n<=12){ctx.fillStyle='#0f172a';ctx.beginPath();ctx.arc(X(xs),Y(h),4,0,7);ctx.fill();}
+  }
+  // 축
+  ctx.strokeStyle='#334155'; ctx.lineWidth=1.6;
+  if(ymin<0&&ymax>0){ctx.beginPath();ctx.moveTo(L,Y(0));ctx.lineTo(W-R,Y(0));ctx.stroke();}
+  if(xmin<0&&xmax>0){ctx.beginPath();ctx.moveTo(X(0),T);ctx.lineTo(X(0),H-B);ctx.stroke();}
+  // 곡선
+  ctx.strokeStyle='#7c3aed'; ctx.lineWidth=3; ctx.beginPath(); let started=false;
+  for(let i=0;i<=600;i++){const x=xmin+(xmax-xmin)*i/600,y=f(x);
+    if(!isFinite(y)){started=false;continue}
+    if(!started){ctx.moveTo(X(x),Y(y));started=true}else ctx.lineTo(X(x),Y(y));}
+  ctx.stroke();
+  // a, b 표시
+  ctx.setLineDash([5,4]); ctx.strokeStyle='#0f172a'; ctx.lineWidth=1;
+  [[S.a,'a'],[S.b,'b']].forEach(([x,t])=>{ctx.beginPath();ctx.moveTo(X(x),T);ctx.lineTo(X(x),H-B);ctx.stroke();
+    ctx.fillStyle='#0f172a';ctx.font='bold 16px sans-serif';ctx.textAlign='center';ctx.fillText(t,X(x),T+14);});
+  ctx.setLineDash([]);
+  ctx.fillStyle='#7c3aed';ctx.font='bold 17px sans-serif';ctx.textAlign='left';ctx.fillText(FUNCS[S.fi].label,L+10,T+18);
+}
+
+/* ====================== UI 동기화 ====================== */
+function refresh(){
+  $('fSel').value=S.fi; $('mSel').value=S.method;
+  $('aRng').value=S.a; $('bRng').value=S.b; $('nRng').value=S.n; $('showArea').checked=S.showArea;
+  $('aVal').textContent=S.a; $('bVal').textContent=S.b; $('nVal').textContent=S.n; $('fLabel').textContent='';
+  const r=riemann();
+  $('dxOut').textContent=fmt(r.dx,4);
+  $('sOut').textContent=S.hideSum?'✏ 직접 계산해 보세요':fmt(r.s,4);
+  if(S.exactUnlocked){$('exactChip').classList.remove('locked');$('exOut').textContent=fmt(exact(),4);}
+  else{$('exactChip').classList.add('locked');$('exOut').textContent='🔒 탐구 3단계 후 공개';}
+  const mname={left:'왼쪽 끝점',right:'오른쪽 끝점',mid:'가운데 점'}[S.method];
+  $('formulaRow').innerHTML=`S<sub>n</sub> = Σ (높이) × (가로) = Σ f(x<sub>k</sub>)·Δx &nbsp;<span class="small">— 높이는 각 칸의 ${mname}에서의 함숫값</span>`;
+  draw();
+}
+FUNCS.forEach((F,i)=>{const o=document.createElement('option');o.value=i;o.textContent=F.label;$('fSel').appendChild(o)});
+$('fSel').onchange=e=>{S.fi=+e.target.value;refresh()};
+$('mSel').onchange=e=>{S.method=e.target.value;refresh()};
+$('aRng').oninput=e=>{S.a=+e.target.value;refresh()};
+$('bRng').oninput=e=>{S.b=+e.target.value;refresh()};
+$('nRng').oninput=e=>{S.n=+e.target.value;S.maxN=Math.max(S.maxN,S.n);refresh()};
+$('showArea').onchange=e=>{S.showArea=e.target.checked;refresh()};
+let animT=null;
+$('animBtn').onclick=()=>{
+  if(animT){clearInterval(animT);animT=null;$('animBtn').textContent='▶ n을 점점 늘려보기';return}
+  S.n=1;$('animBtn').textContent='⏸ 멈추기';
+  animT=setInterval(()=>{S.n=S.n<20?S.n+1:Math.min(200,Math.round(S.n*1.12));S.maxN=Math.max(S.maxN,S.n);refresh();
+    if(S.n>=200){clearInterval(animT);animT=null;$('animBtn').textContent='▶ n을 점점 늘려보기'}},260);
+};
+
+/* ====================== 탐구 미션 ====================== */
+const INT = (a,b,body)=>`<span class="formula"><span class="int">∫</span><span class="lim"><span>${b}</span><span>${a}</span></span>${body}</span>`;
+const MISSIONS = [
+ { title:'1. 공식이 없는 넓이', setup:{fi:1,a:0,b:2,n:2,method:'right',showArea:true}, hideSum:true,
+   story:`곡선 <b>y = x²</b>과 x축, x = 0, x = 2 사이의 <b>보라색 영역</b>을 보세요.<br>삼각형도, 사각형도 아니라서 <b>넓이 공식이 없어요!</b><br>그래서 우리가 아는 도형인 <b>직사각형 2개</b>로 대신 채워 봤어요.<div class="tip">💡 직사각형의 높이는 검은 점에서의 함숫값이에요. 검은 점은 x = 1, x = 2에 있어요.</div>`,
+   q:{type:'num', text:'파란 직사각형 2개의 넓이를 직접 계산해서 더해 보세요.', answer:5, tol:0.001},
+   hints:['두 직사각형의 가로 길이는 모두 1이에요. 높이는 f(1) = 1² 과 f(2) = 2² 이에요.','(가로 × 높이)를 각각 구해서 더해요: 1 × 1  +  1 × 4 = ?'],
+   success:'맞아요, <b>5</b>예요! 공식이 없는 곡선 아래 넓이도 직사각형으로 <b>어림</b>할 수 있어요. 그런데 5가 실제 넓이와 정말 같을까요?',
+   reveal:'왼쪽 직사각형: 가로 1 × 높이 f(1)=1 → 1, 오른쪽 직사각형: 가로 1 × 높이 f(2)=4 → 4, 합 = <b>5</b>' },
+
+ { title:'2. 어림한 값은 정확할까?', setup:{fi:1,a:0,b:2,n:2,method:'right',showArea:true},
+   story:`앞에서 직사각형 2개로 어림한 넓이는 <b>5</b>였어요.<div class="tip">💡 직사각형의 윗변과 곡선을 자세히 비교해 보세요.</div>`,
+   q:{type:'mc', text:'직사각형 넓이의 합 5는 보라색 실제 넓이보다…', options:['더 크다','더 작다','정확히 같다'], answer:0},
+   hints:['직사각형의 윗부분이 곡선 위로 튀어나와 있나요, 곡선 아래에 숨어 있나요?','지금은 각 칸의 "오른쪽 끝"에서 높이를 정했어요. x²은 오른쪽으로 갈수록 커지죠?'],
+   success:'정확해요! 튀어나온 부분 때문에 5는 실제보다 <b>커요</b>. 그럼 이 튀어나온 "오차"를 줄이려면 어떻게 해야 할까요?',
+   reveal:'오른쪽 끝점으로 높이를 정하면, x²이 증가하므로 직사각형이 곡선 위로 튀어나와 실제보다 <b>크다</b>.' },
+
+ { title:'3. 더 잘게 쪼개 보자', setup:{fi:1,a:0,b:2,n:2,method:'right',showArea:true}, needN:50,
+   story:`아래 <b>n 슬라이더</b>를 움직여 직사각형 개수를 4개, 10개, 50개, 200개로 늘려 보세요. (▶ 버튼을 눌러도 돼요)<br>튀어나온 부분과 <b>S<sub>n</sub> 값</b>이 어떻게 변하는지 지켜보세요.`,
+   q:{type:'num', text:'n이 아주 커지면 S<sub>n</sub>은 어떤 수에 점점 가까워질까요? (소수 둘째 자리까지)', answer:8/3, tol:0.02},
+   hints:['n = 200일 때의 S<sub>n</sub> 값을 읽어 보세요. n이 커질수록 S<sub>n</sub>은 점점 작아지다가 어떤 값 근처에서 거의 멈춰요.','2.66…처럼 6이 계속 반복되는 수예요. 소수 둘째 자리까지 반올림하면?'],
+   success:'훌륭해요! S<sub>n</sub>은 2.666… (= 8/3)에 한없이 가까워져요. 이렇게 <b>가까워지는 값</b>을 '+INT(0,2,'x² dx')+' 로 쓰고, <b>정적분</b>이라고 불러요. 처음 어림한 5보다 훨씬 정확하죠? 이제 그래프 아래 <b>참값</b>이 공개됐어요!',
+   reveal:'n = 200이면 S<sub>n</sub> ≈ 2.687, 점점 2.666… ≈ <b>2.67</b> (= 8/3)에 가까워져요.', onSolve:()=>{S.exactUnlocked=true} },
+
+ { title:'4. 높이를 다르게 잡으면?', setup:{fi:1,a:0,b:2,n:6,method:'left',showArea:true},
+   story:`이번에는 각 칸의 <b>왼쪽 끝점</b>에서 높이를 정했어요. 그래프가 어떻게 달라졌나요?<div class="tip">💡 “직사각형 높이를 정하는 점”을 오른쪽/왼쪽으로 바꿔 가며 비교해 보세요.</div>`,
+   q:{type:'mc', text:'왼쪽 끝점을 쓰고 n을 아주 크게 하면 S<sub>n</sub>은 어떻게 될까요?', options:['실제 넓이보다 항상 2배 크다','점점 실제 넓이(약 2.67)에 가까워진다','0에 가까워진다','n이 커질수록 계속 커진다'], answer:1},
+   hints:['왼쪽 끝점으로 놓고 n을 200까지 올려 보세요. S<sub>n</sub>이 어떤 값 근처로 가나요?','직사각형이 아주 가늘어지면 왼쪽 끝과 오른쪽 끝의 높이 차이는 어떻게 될까요?'],
+   success:'맞아요! 처음엔 왼쪽 끝점이 실제보다 작고, 오른쪽 끝점이 크지만 <b>n이 커지면 둘 다 같은 값</b>에 가까워져요. 그래서 정적분 값은 하나로 정해져요.',
+   reveal:'왼쪽이든 오른쪽이든 n을 키우면 모두 <b>8/3 (약 2.67)</b>에 가까워진다.' },
+
+ { title:'5. Σ 에서 ∫ 로', setup:{fi:1,a:0,b:2,n:20,method:'right',showArea:false},
+   story:`직사각형 넓이의 합은 <span class="formula">S<sub>n</sub> = Σ f(x<sub>k</sub>) · Δx</span> 였어요.<br>n을 한없이 크게 하면 이것이 ${INT(0,2,'x² dx')} 가 돼요.<br>Σ(합)는 길게 늘인 S 모양 ∫ 로 바뀌었어요.`,
+   q:{type:'mc', text:'그렇다면 ∫ 기호 뒤의 <b>f(x)</b>와 <b>dx</b>는 직사각형의 무엇과 연결될까요?', options:['f(x): 직사각형 개수,  dx: 넓이의 합','f(x): 높이,  dx: 아주 작아진 가로 길이 Δx','f(x): 가로 길이,  dx: 높이','f(x): 넓이,  dx: x축'], answer:1},
+   hints:['S<sub>n</sub> = Σ f(x<sub>k</sub>)·Δx 에서 f(x<sub>k</sub>)는 직사각형의 어디 길이였나요?','Δx = (b − a) ÷ n 이에요. n이 커지면 Δx는 어떻게 되나요? 그것이 dx가 돼요.'],
+   success:'정확해요! <b>f(x) × dx = 높이 × 아주 가는 가로</b> = 아주 가는 직사각형 하나의 넓이. 이것을 a부터 b까지 <b>모두 더한 것(∫)</b>이 정적분이에요.',
+   reveal:'f(x)는 높이, dx는 한없이 작아진 가로 길이 Δx.' },
+
+ { title:'6. x축 아래에 있으면?', setup:{fi:3,a:0,b:2,n:10,method:'mid',showArea:true},
+   story:`함수 <b>y = −x + 1</b>은 x = 1 이후로 x축 <b>아래</b>로 내려가요. 빨간 직사각형을 보세요.<div class="tip">💡 빨간 직사각형의 높이 f(x)는 양수일까요, 음수일까요? 그러면 높이 × 가로는?</div>`,
+   q:{type:'num', text:INT(0,2,'(−x + 1) dx')+' 의 값을 예상해 보세요.', answer:0, tol:0.001},
+   hints:['파란 삼각형(0~1)과 빨간 삼각형(1~2)의 넓이를 각각 구해 보세요.','빨간 부분은 f(x)가 음수라서 f(x)·Δx도 음수예요. 파란 부분(+)과 빨간 부분(−)을 더하면?'],
+   success:'맞아요, <b>0</b>이에요! 그래프 아래 S<sub>n</sub>과 참값도 확인해 보세요. 넓이가 분명히 있는데 왜 0이 될까요? 다음 단계에서 설명해 봐요.',
+   reveal:'파란 삼각형 +1/2, 빨간 삼각형 −1/2 → 합은 <b>0</b>' },
+
+ { title:'7. 왜 0이 됐을까?', setup:{fi:3,a:0,b:2,n:10,method:'mid',showArea:true},
+   story:`앞 단계에서 색칠된 부분이 분명히 있는데, 정적분 값은 0이었어요.`,
+   q:{type:'text', text:'정적분 값이 0이 된 이유를 자신의 말로 설명해 보세요. (한두 문장이면 충분해요)',
+      rubric:[{name:'x축 아래 부분은 음수(−)로 계산된다', kw:['음수','마이너스','-','−','음의','아래','빼','작은 값']},
+              {name:'위·아래 크기가 같아 서로 없어진다', kw:['같','상쇄','없어','지워','서로','0','더하면','합치','똑같']}],
+      need:2,
+      goal:'x축 아래 부분은 f(x)<0이므로 f(x)Δx가 음수로 더해지고, 위쪽(+1/2)과 아래쪽(−1/2)의 크기가 같아 서로 상쇄되어 0이 된다. 정적분은 "부호가 있는 넓이"이다.'},
+   hints:['빨간 직사각형 하나의 "높이 × 가로" 값은 + 일까요, − 일까요?','파란 부분의 합과 빨간 부분의 합은 크기가 어떤가요? 둘을 더하면?'],
+   success:'좋은 설명이에요! 정적분은 그냥 넓이가 아니라 <b>x축 위는 +, 아래는 −로 계산한 넓이의 합</b>이에요.',
+   reveal:'x축 아래는 f(x)가 음수라 −로 더해지고, 위(+1/2)와 아래(−1/2)가 크기가 같아 상쇄되어 0이 된다.' },
+
+ { title:'8. 정적분을 내 말로 정리하기', setup:{fi:5,a:-1,b:2,n:12,method:'mid',showArea:true},
+   story:`지금까지 탐구한 내용을 떠올려 보세요. 그래프를 자유롭게 바꿔 보며 생각을 정리해도 좋아요.`,
+   q:{type:'text', text:INT('a','b','f(x) dx')+' 는 무엇을 뜻할까요? 미적분을 모르는 친구에게 설명하듯 써 보세요.',
+      rubric:[{name:'구간을 쪼개 직사각형을 만든다', kw:['직사각형','사각형','쪼개','나누','잘게','막대']},
+              {name:'직사각형 넓이를 더한다(합)', kw:['더','합','Σ','시그마']},
+              {name:'개수를 한없이 늘린다(극한)', kw:['무한','한없이','많이','가까워','극한','아주 작','늘리','작게','가늘']},
+              {name:'곡선과 x축 사이의 넓이(부호 포함)', kw:['넓이','면적','영역']}],
+      need:3,
+      goal:'a부터 b까지 구간을 n개로 잘게 나누어 높이 f(x), 가로 Δx인 직사각형들을 만들고, 그 넓이를 모두 더한 뒤 n을 한없이 크게 할 때 가까워지는 값. 곡선과 x축 사이의 (x축 아래는 음수로 계산하는) 넓이.'},
+   hints:['우리가 처음에 곡선 아래를 무엇으로 채웠나요? 그리고 그것들을 어떻게 했나요?','n을 크게 하면 무슨 일이 생겼는지도 함께 써 보세요.'],
+   success:'🎉 모든 탐구를 마쳤어요! 정적분은 <b>잘게 쪼갠 직사각형 넓이의 합이 가까워지는 값</b>, 곧 곡선과 x축 사이의 (부호 있는) 넓이예요.',
+   reveal:'구간 [a, b]를 잘게 쪼개 직사각형 넓이 f(x)·Δx를 모두 더하고, 개수를 한없이 늘렸을 때 가까워지는 값.' },
+];
+
+const STORE='defint_progress_v1';
+let P = loadProg();
+function loadProg(){try{return JSON.parse(localStorage.getItem(STORE))||{done:[],cur:0}}catch(e){return {done:[],cur:0}}}
+function saveProg(){try{localStorage.setItem(STORE,JSON.stringify(P))}catch(e){}}
+let tries=0, selOpt=null;
+
+function golfUnlocked(){return MISSIONS.every((m,i)=>P.done.includes(i))}
+function updateGolfBtn(){
+  const on=golfUnlocked(), g=$('golfBtn');
+  g.textContent=on?'⛳ 정적분 골프':'🔒 보너스 게임';
+  g.style.background=on?'#16a34a':''; g.style.borderColor=on?'#16a34a':'';
+  g.title=on?'보너스 게임: 정적분 골프':'8단계를 모두 마치면 열려요';
+}
+$('golfBtn').onclick=()=>{
+  if(golfUnlocked()) openGolf();
+  else alert(`🔒 보너스 게임은 탐구 8단계를 모두 마치면 열려요!\n(지금 ${P.done.length}/${MISSIONS.length}단계 완료)`);
+};
+function renderProg(){
+  updateGolfBtn();
+  const box=$('prog'); box.innerHTML='';
+  MISSIONS.forEach((m,i)=>{
+    const d=document.createElement('div'); d.className='dot'; d.textContent=i+1;
+    const unlocked = i===0 || P.done.includes(i-1) || P.done.includes(i);
+    if(P.done.includes(i)) d.classList.add('done');
+    if(i===P.cur) d.classList.add('cur');
+    if(!unlocked) d.classList.add('lock');
+    d.title=m.title;
+    d.onclick=()=>{if(unlocked){P.cur=i;saveProg();loadMission()}};
+    box.appendChild(d);
+  });
+}
+function loadMission(){
+  const m=MISSIONS[P.cur]; tries=0; selOpt=null;
+  Object.assign(S,m.setup); S.maxN=S.n; S.hideSum=!!m.hideSum && !P.done.includes(P.cur);
+  if(P.done.includes(2)) S.exactUnlocked=true;
+  refresh(); renderProg();
+  const q=m.q; let qhtml='';
+  if(q.type==='num') qhtml=`<input type="text" id="ans" placeholder="답을 입력하세요 (예: 0.5 또는 1/2)">`;
+  if(q.type==='mc') qhtml=q.options.map((o,i)=>`<button class="opt" data-i="${i}">${String.fromCharCode(9312+i)} ${o}</button>`).join('');
+  if(q.type==='text') qhtml=`<textarea id="ans" placeholder="생각한 것을 자유롭게 써 보세요."></textarea>`;
+  const solved=P.done.includes(P.cur);
+  $('mission').innerHTML=`
+    <div class="mtitle">${m.title}</div>
+    <div class="story">${m.story}</div>
+    <div class="qbox">
+      <div class="q">❓ ${q.text}</div>
+      ${qhtml}
+      <div class="row">
+        <button id="submitBtn">제출하기</button>
+        <button class="ghost" id="hintBtn">💡 힌트</button>
+        <button class="ghost" id="revealBtn" style="display:none">풀이 보기</button>
+        <button class="sec" id="nextBtn" style="display:${solved?'inline-block':'none'}">${P.cur<MISSIONS.length-1?'다음 단계 ▶':'처음부터 다시'}</button>
+      </div>
+      <div class="hintline" id="hintLine">${solved?'✅ 이미 해결한 단계예요. 다시 풀어 봐도 좋아요.':'먼저 혼자 생각해 보고, 막히면 힌트를 눌러요.'}</div>
+    </div>
+    <div class="fb" id="fb"></div>`;
+  document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.opt').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); selOpt=+b.dataset.i;});
+  let hintIdx=0;
+  $('hintBtn').onclick=()=>{
+    if(hintIdx<m.hints.length){ showFb('info','💡 힌트 '+(hintIdx+1)+': '+m.hints[hintIdx]); hintIdx++; }
+    else showFb('info','💡 힌트를 모두 봤어요. 그래프를 직접 움직여 보면서 한 번 더 생각해 볼까요?');
+  };
+  $('revealBtn').onclick=()=>showFb('info','📘 풀이: '+m.reveal+'<br><span class="small">풀이를 읽고 난 뒤, 자신의 말로 다시 답을 제출해 보세요.</span>');
+  $('submitBtn').onclick=()=>submit(m);
+  $('nextBtn').onclick=()=>{ if(P.cur<MISSIONS.length-1){P.cur++;} else {P.cur=0;} saveProg(); loadMission(); };
+  const ans=$('ans'); if(ans&&q.type==='num') ans.onkeydown=e=>{if(e.key==='Enter')submit(m)};
+}
+function showFb(kind,html){const fb=$('fb');fb.className='fb show '+kind;fb.innerHTML=html;}
+function parseNum(s){
+  s=(s||'').replace(/\s/g,'').replace(/[약≈]/g,'').replace(/−/g,'-');
+  if(/^-?\d+(\.\d+)?\/-?\d+(\.\d+)?$/.test(s)){const [p,q]=s.split('/').map(Number);return q?p/q:NaN}
+  if(/^-?(\d+\.?\d*|\.\d+)$/.test(s)) return Number(s);
+  if(/^-?\d*\.?\d+\.\.\.$/.test(s)||/…$/.test(s)) return Number(s.replace(/\.\.\.|…/g,''));
+  return NaN;
+}
+function solved(m){
+  const first=!P.done.includes(P.cur);
+  if(first){P.done.push(P.cur); saveProg();}
+  if(m.onSolve) m.onSolve();
+  S.hideSum=false;
+  refresh(); renderProg();
+  $('nextBtn').style.display='inline-block'; $('revealBtn').style.display='none';
+  $('hintLine').textContent='✅ 해결!';
+  if(golfUnlocked()){
+    const fb=$('fb'); const d=document.createElement('div'); d.style.marginTop='10px';
+    d.innerHTML='<b>🎁 보너스 게임이 열렸어요!</b> 배운 정적분으로 골프를 쳐 볼까요? <button style="background:#16a34a;margin-left:6px">⛳ 정적분 골프 시작</button>';
+    d.querySelector('button').onclick=()=>openGolf(); fb.appendChild(d);
+  }
+}
+function wrong(m, msg){
+  tries++;
+  const h = m.hints[Math.min(tries-1,m.hints.length-1)];
+  showFb('bad', msg + '<br>💡 '+h);
+  if(tries>=3) $('revealBtn').style.display='inline-block';
+  $('hintLine').textContent=`시도 ${tries}번째 — 틀려도 괜찮아요. 생각을 고쳐 가는 게 배우는 과정이에요.`;
+}
+async function submit(m){
+  const q=m.q;
+  if(q.type==='num'){
+    const raw=$('ans').value.trim(); const v=parseNum(raw);
+    if(raw===''){showFb('info','답을 먼저 입력해 볼까요? 정확하지 않아도 괜찮아요!');return}
+    if(isNaN(v)){showFb('info','숫자나 분수 형태(예: 0.5, 1/2)로 입력해 주세요.');return}
+    if(m.needN && S.maxN<m.needN && Math.abs(v-q.answer)>q.tol){showFb('info',`먼저 n을 ${m.needN}개 이상으로 늘려 보면서 S<sub>n</sub> 값을 관찰해 볼까요?`);return}
+    if(Math.abs(v-q.answer)<=q.tol){ showFb('good','✅ '+m.success); solved(m); }
+    else{
+      let msg='🤔 아직 아니에요.';
+      if(P.cur===0 && Math.abs(v-4)<1e-6) msg='🤔 오른쪽 직사각형 하나만 계산했나요? 직사각형은 2개예요.';
+      if(P.cur===0 && Math.abs(v-1)<1e-6) msg='🤔 왼쪽 직사각형 하나만 계산했나요? 직사각형은 2개예요.';
+      if(P.cur===0 && Math.abs(v-3)<1e-6) msg='🤔 높이를 x값 그대로(1과 2) 썼나요? 높이는 x가 아니라 f(x) = x² 이에요.';
+      if(P.cur===2 && v>2.55 && v<2.8) msg='🤔 아주 가까워요! 조금만 더 정확하게 생각해 볼까요? n을 더 크게 하면 어떤 수에 다가가나요?';
+      if(P.cur===2 && Math.abs(v-S.maxN)<1e-6) msg='🤔 그건 n의 값이에요. 우리가 볼 것은 직사각형 넓이의 합 S<sub>n</sub>이에요.';
+      if(P.cur===5 && Math.abs(v-1)<1e-6) msg='🤔 넓이를 모두 +로 더했군요! 그런데 빨간 직사각형의 높이 f(x)는 양수일까요?';
+      wrong(m,msg);
+    }
+  }
+  if(q.type==='mc'){
+    if(selOpt===null){showFb('info','보기 중 하나를 골라 볼까요?');return}
+    if(selOpt===q.answer){ showFb('good','✅ '+m.success); solved(m); }
+    else wrong(m,'🤔 다시 생각해 볼까요? 그래프를 직접 움직여 보면 단서를 찾을 수 있어요.');
+  }
+  if(q.type==='text'){
+    const txt=$('ans').value.trim();
+    if(txt.length<5){showFb('info','조금만 더 길게 써 볼까요? 한두 문장이면 돼요.');return}
+    if(aiReady()){
+      showFb('info','<span class="spin"></span> AI 선생님이 답을 읽고 있어요…');
+      try{
+        const r=await aiJudge(m,txt);
+        if(r.pass){ showFb('good','✅ '+escapeHtml(r.feedback)+'<br><br>'+m.success); solved(m); }
+        else { tries++; showFb('bad','🤔 '+escapeHtml(r.feedback)); if(tries>=3)$('revealBtn').style.display='inline-block';
+               $('hintLine').textContent=`시도 ${tries}번째 — 피드백을 참고해서 고쳐 써 보세요.`; }
+        return;
+      }catch(e){ console.warn(e); /* 실패 시 규칙 기반으로 */ }
+    }
+    ruleJudge(m,txt);
+  }
+}
+function ruleJudge(m,txt){
+  const q=m.q; const hit=q.rubric.map(r=>r.kw.some(k=>txt.includes(k)));
+  const got=q.rubric.filter((r,i)=>hit[i]), miss=q.rubric.filter((r,i)=>!hit[i]);
+  if(got.length>=q.need){
+    showFb('good','✅ 잘 설명했어요! 특히 <b>'+got.map(g=>g.name).join('</b>, <b>')+'</b>를 담아냈어요.<br><br>'+m.success); solved(m);
+  }else{
+    let msg = got.length? '👍 <b>'+got.map(g=>g.name).join(', ')+'</b> 부분은 좋아요!<br>':'좋은 시작이에요!<br>';
+    msg += '🤔 그런데 한 가지 더 생각해 볼까요? ';
+    wrong(m,msg);
+  }
+}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+/* ====================== AI 서버(구글 앱스크립트) 연동 ======================
+   API 키와 교사 PIN은 앱스크립트 서버에만 저장돼요. 이 페이지에는 키가 전혀 들어 있지 않아요.
+   ▼ 앱스크립트를 '웹 앱'으로 배포한 뒤 받은 주소(…/exec)를 아래에 붙여 넣으세요. */
+const GAS_URL = '';
+/* ================================================================== */
+
+function serverUrl(){ if(GAS_URL) return GAS_URL; try{return localStorage.getItem('defint_gas_url')||''}catch(e){return ''} }
+async function api(action, data={}){
+  const url=serverUrl(); if(!url) throw new Error('AI 서버 주소가 설정되지 않았어요.');
+  const ctrl=new AbortController(); const timer=setTimeout(()=>ctrl.abort(),45000);
+  try{
+    // text/plain으로 보내면 브라우저의 사전 확인(CORS preflight) 없이 앱스크립트에 바로 전달돼요.
+    const res=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action,...data}),signal:ctrl.signal,redirect:'follow'});
+    const j=await res.json();
+    if(!j.ok) throw new Error(j.error||'서버 오류');
+    return j;
+  }catch(e){ if(e.name==='AbortError') throw new Error('서버 응답이 너무 늦어요.'); throw e; }
+  finally{ clearTimeout(timer); }
+}
+
+let AI_ON=false;
+try{localStorage.removeItem('defint_cfg_v1')}catch(e){} // 예전 버전이 브라우저에 남긴 키가 있으면 지워요
+function aiReady(){return AI_ON}
+function updateBadge(){
+  $('aiBadge').textContent=AI_ON?'AI 피드백 켜짐':'AI 피드백 꺼짐';
+  $('aiBadge').classList.toggle('on',AI_ON); $('chatCard').style.display=AI_ON?'block':'none';
+}
+async function refreshStatus(){
+  if(!serverUrl()){AI_ON=false;updateBadge();return}
+  try{ const j=await api('status'); AI_ON=!!j.aiEnabled; }catch(e){ console.warn('AI 서버 연결 실패:',e.message); AI_ON=false; }
+  updateBadge();
+}
+async function aiJudge(m,txt){
+  const q=m.q;
+  const j=await api('judge',{question:q.text.replace(/<[^>]+>/g,' '), goal:q.goal, rubric:q.rubric.map(r=>r.name), need:q.need, tries:tries+1, answer:txt});
+  return {pass:!!j.result.pass, feedback:j.result.feedback||''};
+}
+const chatHist=[];
+function addMsg(who,text){const d=document.createElement('div');d.className='msg '+who;d.textContent=text;$('chatLog').appendChild(d);$('chatLog').scrollTop=1e9;return d}
+async function sendChat(){
+  const t=$('chatIn').value.trim(); if(!t) return; $('chatIn').value='';
+  addMsg('me',t); const w=addMsg('ai','생각 중…'); $('chatSend').disabled=true;
+  const m=MISSIONS[P.cur];
+  const context=`탐구 단계: ${m.title} / 질문: ${m.q.text.replace(/<[^>]+>/g,' ')} / 함수 ${FUNCS[S.fi].label}, 구간 [${S.a}, ${S.b}], n=${S.n}, 높이 기준: ${S.method}, S_n=${fmt(riemann().s,4)}`;
+  chatHist.push({role:'user',text:t});
+  try{
+    const j=await api('chat',{history:chatHist.slice(-10),context});
+    w.textContent=j.text; chatHist.push({role:'model',text:j.text});
+  }catch(e){ w.textContent='⚠ '+e.message; chatHist.pop(); }
+  $('chatSend').disabled=false;
+}
+$('chatSend').onclick=sendChat; $('chatIn').onkeydown=e=>{if(e.key==='Enter'&&!e.isComposing)sendChat()};
+
+/* ====================== 관리자 모드 ====================== */
+const modal=$('adminModal');
+let adminToken='';
+const BASE_MODELS=[
+  {id:'gemini-3.8-flash',      name:'Gemini 3.8 Flash',      desc:'⭐ 추천 — 최신 Flash 모델. 빠르고 똑똑해서 수업용 피드백에 가장 알맞아요.'},
+  {id:'gemini-3.6-flash',      name:'Gemini 3.6 Flash',      desc:'안정(정식) 버전 Flash 모델. 3.8이 잘 안 될 때 쓰세요.'},
+  {id:'gemini-3.5-flash-lite', name:'Gemini 3.5 Flash-Lite', desc:'가장 빠르고 저렴해요. 피드백이 조금 단순할 수 있어요.'},
+  {id:'gemini-3.1-flash-lite', name:'Gemini 3.1 Flash-Lite', desc:'저렴한 이전 모델 (2027년 5월 7일 종료 예정).'},
+  {id:'gemini-4-argon',        name:'Gemini 4 Argon',        desc:'고성능 추론 모델. 더 꼼꼼하지만 느리고 비용이 커요.'},
+  {id:'gemini-4-carbon',       name:'Gemini 4 Carbon',       desc:'가장 강력한 모델. 이 앱에는 성능이 넘치고 비용이 가장 커요.'},
+];
+const OLD_MODEL=/^gemini-(1\.|2\.|3-pro|3\.1-flash-lite-preview|3\.5-flash$|3\.7-flash)/;
+function fillModels(list, selected){
+  const sel=$('modelIn'); sel.innerHTML='';
+  if(selected && !list.some(m=>m.id===selected)) list=[{id:selected,name:selected,desc:''},...list];
+  list.forEach(m=>{const o=document.createElement('option');o.value=m.id;o.textContent=m.name;o.dataset.desc=m.desc||'';sel.appendChild(o)});
+  sel.value=selected||list[0].id; showModelDesc();
+}
+function showModelDesc(){const o=$('modelIn').selectedOptions[0];$('modelDesc').textContent=o?(o.dataset.desc||o.value):'';}
+$('modelIn').onchange=showModelDesc;
+function cfgMsg(color,html){$('cfgMsg').style.color=color;$('cfgMsg').innerHTML=html}
+const busy=t=>cfgMsg('var(--muted)','<span class="spin"></span> '+t);
+
+$('adminBtn').onclick=()=>{
+  modal.classList.add('show');
+  if(adminToken){showCfg();return}
+  $('pinStep').style.display='block';$('cfgStep').style.display='none';$('pinIn').value='';$('pinMsg').textContent='';
+  $('srvInfo').innerHTML = serverUrl()? '' :
+    '⚠ AI 서버 주소가 아직 없어요. index.html의 <code>GAS_URL</code>에 앱스크립트 주소를 넣거나, 아래에 임시로 입력하세요.<br><input type="text" id="gasTmp" placeholder="https://script.google.com/macros/s/…/exec" style="margin-top:6px"><button class="ghost" id="gasTmpSave" style="margin-top:6px">이 기기에 임시 저장</button>';
+  const gs=$('gasTmpSave'); if(gs) gs.onclick=()=>{const v=$('gasTmp').value.trim(); if(!/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(v)){$('pinMsg').textContent='앱스크립트 웹 앱 주소(…/exec) 형식이 아니에요.';return}
+    try{localStorage.setItem('defint_gas_url',v)}catch(e){} $('srvInfo').textContent='✅ 저장했어요. 이제 PIN을 입력하세요.'; refreshStatus();};
+  setTimeout(()=>$('pinIn').focus(),50);
+};
+modal.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>modal.classList.remove('show'));
+modal.onclick=e=>{if(e.target===modal)modal.classList.remove('show')};
+
+async function pinCheck(){
+  const pin=$('pinIn').value; if(!pin) return;
+  $('pinMsg').style.color='var(--muted)'; $('pinMsg').innerHTML='<span class="spin"></span> 확인 중…'; $('pinOk').disabled=true;
+  try{ const j=await api('login',{pin}); adminToken=j.token; $('pinIn').value=''; $('pinMsg').textContent=''; await showCfg(); }
+  catch(e){ $('pinMsg').style.color='var(--red)'; $('pinMsg').textContent=e.message; }
+  $('pinOk').disabled=false;
+}
+async function showCfg(){
+  $('pinStep').style.display='none';$('cfgStep').style.display='block'; $('keyIn').value=''; $('newPin').value='';
+  busy('설정을 불러오는 중…');
+  try{
+    const c=await api('getConfig',{token:adminToken});
+    $('keyState').innerHTML=c.hasKey?`<span style="color:var(--green)">● 저장됨 (끝자리 …${escapeHtml(c.keyTail)})</span>`:'<span style="color:var(--red)">● 아직 없음</span>';
+    fillModels(BASE_MODELS, c.model);
+    $('aiOn').checked=c.aiEnabled; $('perMin').value=c.perMinute; $('perDay').value=c.perDay;
+    $('usage').textContent=`오늘 사용: ${c.usedToday} / ${c.perDay}회`;
+    $('pinWarn').style.display=c.mustChangePin?'block':'none';
+    cfgMsg('var(--muted)','');
+  }catch(e){ handleAdminErr(e); }
+}
+function handleAdminErr(e){
+  if(/로그인이 만료/.test(e.message)){ adminToken=''; $('cfgStep').style.display='none'; $('pinStep').style.display='block'; $('pinMsg').style.color='var(--red)'; $('pinMsg').textContent=e.message; return; }
+  cfgMsg('var(--red)','❌ '+escapeHtml(e.message));
+}
+$('pinOk').onclick=pinCheck; $('pinIn').onkeydown=e=>{if(e.key==='Enter')pinCheck()};
+$('keyShow').onclick=()=>{const k=$('keyIn');k.type=k.type==='password'?'text':'password';$('keyShow').textContent=k.type==='password'?'보기':'숨기기'};
+$('modelLoad').onclick=async()=>{
+  busy('사용 가능한 모델을 불러오는 중…');
+  try{
+    const j=await api('listModels',{token:adminToken});
+    const known=Object.fromEntries(BASE_MODELS.map(m=>[m.id,m.desc]));
+    const list=j.models.filter(m=>!OLD_MODEL.test(m.id))
+      .map(m=>({...m,desc:known[m.id]||(/preview|exp/i.test(m.id)?'미리보기(시험용) 모델이에요. 갑자기 바뀌거나 없어질 수 있어요.':'')}))
+      .sort((a,b)=>(known[b.id]?1:0)-(known[a.id]?1:0) || b.id.localeCompare(a.id));
+    if(!list.length) throw new Error('사용할 수 있는 모델이 없어요.');
+    const cur=$('modelIn').value; fillModels(list, list.some(m=>m.id===cur)?cur:list[0].id);
+    cfgMsg('var(--green)',`✅ 모델 ${list.length}개를 불러왔어요. 하나를 고르고 ‘저장’을 눌러 주세요.`);
+  }catch(e){ handleAdminErr(e); }
+};
+async function saveCfg(extra={}){
+  const data={token:adminToken, model:$('modelIn').value, aiEnabled:$('aiOn').checked,
+    perMinute:Number($('perMin').value)||undefined, perDay:Number($('perDay').value)||undefined, ...extra};
+  const k=$('keyIn').value.trim(); if(k) data.key=k;
+  const np=$('newPin').value.trim(); if(np) data.newPin=np;
+  await api('saveConfig',data);
+  $('keyIn').value=''; $('newPin').value='';
+  return {keyChanged:!!k, pinChanged:!!np};
+}
+$('cfgSave').onclick=async()=>{
+  busy('저장하는 중…');
+  try{ const r=await saveCfg(); await showCfg(); await refreshStatus();
+    cfgMsg('var(--green)','✅ 서버에 저장했어요.'+(r.keyChanged?' (API 키 변경)':'')+(r.pinChanged?' (PIN 변경)':'')); }
+  catch(e){ handleAdminErr(e); }
+};
+$('cfgTest').onclick=async()=>{
+  busy('Gemini 연결을 시험하는 중…');
+  try{ if($('keyIn').value.trim()||$('newPin').value.trim()) await saveCfg();
+    const j=await api('test',{token:adminToken}); await showCfg();
+    cfgMsg('var(--green)','✅ 연결 성공: '+escapeHtml(String(j.text).trim().slice(0,40))); }
+  catch(e){ handleAdminErr(e); }
+};
+$('cfgClear').onclick=async()=>{
+  if(!confirm('서버에 저장된 API 키를 삭제할까요? 삭제하면 학생들은 규칙 기반 피드백만 받아요.')) return;
+  busy('삭제하는 중…');
+  try{ await saveCfg({clearKey:true}); await showCfg(); await refreshStatus(); cfgMsg('var(--muted)','키를 삭제했어요. 규칙 기반 피드백으로 동작합니다.'); }
+  catch(e){ handleAdminErr(e); }
+};
+$('cfgLogout').onclick=async()=>{ try{await api('logout',{token:adminToken})}catch(e){} adminToken=''; modal.classList.remove('show'); };
+$('resetProg').onclick=()=>{if(confirm('이 기기의 학생 진행 상황을 처음으로 되돌릴까요?')){P={done:[],cur:0};S.exactUnlocked=false;saveProg();loadMission();cfgMsg('var(--muted)','진행 상황을 초기화했어요.')}};
+
+
+/* ====================== 사용 안내 투어 ======================
+   처음 접속하면 자동으로 시작하고, 'ⓘ 사용 안내' 버튼으로 언제든 다시 볼 수 있어요. */
+const Tour=(function(){
+  let steps=[], i=0, key='', crumb='', els=null;
+  const store=k=>'defint_tour_'+k;
+  function seen(k){try{return localStorage.getItem(store(k))==='done'}catch(e){return false}}
+  function mark(k){try{localStorage.setItem(store(k),'done')}catch(e){}}
+  function build(){
+    if(els) return;
+    const b=document.createElement('div'); b.className='tour-block';
+    const s=document.createElement('div'); s.className='tour-spot';
+    const c=document.createElement('div'); c.className='tour-card'; c.setAttribute('role','dialog'); c.setAttribute('aria-live','polite');
+    document.body.append(b,s,c); els={b,s,c};
+    window.addEventListener('resize',()=>{if(active())place()});
+    window.addEventListener('scroll',()=>{if(active())place()},true);
+    document.addEventListener('keydown',e=>{ if(!active())return;
+      if(e.key==='Escape')end(); else if(e.key==='ArrowRight')go(1); else if(e.key==='ArrowLeft')go(-1); });
+  }
+  const active=()=>els&&els.c.classList.contains('show');
+  function elOf(st){ if(!st.el) return null; const t=typeof st.el==='function'?st.el():document.querySelector(st.el);
+    if(!t) return null; const r=t.getBoundingClientRect(); return (r.width>0&&r.height>0)?t:null; }
+  function render(){
+    const st=steps[i], n=steps.length, c=els.c;
+    c.innerHTML=`<div class="tc-top"><span>${crumb} · 사용 안내</span><button class="tc-x" aria-label="안내 닫기">×</button></div>
+      <div class="tc-prog"><span>${i+1} / ${n}</span><div class="tc-bar"><i style="width:${(i+1)/n*100}%"></i></div></div>
+      <h3>${st.title}</h3><div class="tc-body">${st.body}</div>
+      <div class="tc-foot"><button class="tc-skip">그만 보기</button><span style="flex:1"></span>
+        ${i>0?'<button class="tc-prev">이전</button>':''}<button class="tc-next">${i===n-1?'시작하기 ✓':'다음 →'}</button></div>`;
+    c.querySelector('.tc-x').onclick=end; c.querySelector('.tc-skip').onclick=end;
+    c.querySelector('.tc-next').onclick=()=>go(1);
+    const p=c.querySelector('.tc-prev'); if(p) p.onclick=()=>go(-1);
+    const t=elOf(st); if(t) t.scrollIntoView({block:'center',inline:'nearest'});
+    place(); c.querySelector('.tc-next').focus({preventScroll:true});
+  }
+  function place(){
+    const t=elOf(steps[i]), c=els.c, s=els.s, vw=innerWidth, vh=innerHeight, pad=6, gap=14;
+    const cw=c.offsetWidth, ch=c.offsetHeight;
+    if(!t){ s.style.display='none'; els.b.classList.add('dim');
+      c.style.left=Math.max(12,(vw-cw)/2)+'px'; c.style.top=Math.max(12,(vh-ch)/2)+'px'; return; }
+    els.b.classList.remove('dim');
+    const r=t.getBoundingClientRect();
+    const L=Math.max(4,r.left-pad), T=Math.max(4,r.top-pad), R=Math.min(vw-4,r.right+pad), B=Math.min(vh-4,r.bottom+pad);
+    Object.assign(s.style,{display:'block',left:L+'px',top:T+'px',width:(R-L)+'px',height:(B-T)+'px'});
+    let top,left;
+    if(B+gap+ch<=vh-8){ top=B+gap; left=r.left+r.width/2-cw/2; }            // 아래
+    else if(T-gap-ch>=8){ top=T-gap-ch; left=r.left+r.width/2-cw/2; }        // 위
+    else if(R+gap+cw<=vw-8){ left=R+gap; top=r.top+r.height/2-ch/2; }        // 오른쪽
+    else if(L-gap-cw>=8){ left=L-gap-cw; top=r.top+r.height/2-ch/2; }        // 왼쪽
+    else { // 자리가 없으면, 강조 영역이 덜 가려지는 쪽(화면 위 또는 아래)에 붙여요
+      const spaceAbove=T, spaceBelow=vh-B;
+      top = spaceBelow>=spaceAbove ? vh-ch-12 : 12; left=r.left+r.width/2-cw/2; }
+    c.style.left=Math.min(Math.max(12,left),vw-cw-12)+'px';
+    c.style.top=Math.min(Math.max(12,top),vh-ch-12)+'px';
+  }
+  function go(d){ const ni=i+d; if(ni<0) return; if(ni>=steps.length){end();return} i=ni; render(); }
+  function end(){ if(!els) return; [els.b,els.c].forEach(e=>e.classList.remove('show')); els.s.style.display='none'; mark(key); }
+  function start(k,list,label){
+    build(); key=k; crumb=label;
+    steps=list.filter(st=>!st.el||elOf(st)); if(!steps.length) return;
+    i=0; els.b.classList.add('show'); els.c.classList.add('show'); render();
+  }
+  return {start,seen,end};
+})();
+
+const MAIN_TOUR=[
+  {title:'정적분 탐구실에 온 걸 환영해요! 👋',
+   body:'곡선 아래를 <b>직사각형으로 쪼개 보면서</b> 정적분의 뜻을 스스로 찾아가는 곳이에요.<br>주요 기능을 1분 안에 둘러볼게요. (키보드 ← → 키로도 넘길 수 있어요)'},
+  {el:'#cv', title:'그래프 화면',
+   body:'보라색 곡선 아래를 직사각형이 채우고 있어요.<br><b style="color:#2563eb">파란색</b>은 x축 위, <b style="color:#dc2626">빨간색</b>은 x축 아래 직사각형이에요.'},
+  {el:'.controls', title:'조작판',
+   body:'함수, 구간의 시작 a와 끝 b, 직사각형 개수 n을 바꿀 수 있어요.<br>🤔 n을 늘리면 무슨 일이 생길지, 직접 움직여 확인해 보세요.'},
+  {el:'#animBtn', title:'n을 점점 늘려보기',
+   body:'누르면 직사각형이 1개부터 200개까지 저절로 늘어나요. 직사각형이 곡선에 어떻게 가까워지는지 지켜보세요.'},
+  {el:'.readout', title:'계산 결과',
+   body:'직사각형 하나의 가로 <b>Δx</b>와 넓이의 합 <b>S<sub>n</sub></b>이 바로 계산돼요.<br>정적분 <b>참값</b>은 처음엔 🔒 잠겨 있고, 탐구 3단계를 해결하면 열려요.'},
+  {el:'#prog', title:'탐구 단계 (8단계)',
+   body:'동그라미 하나가 한 단계예요. 해결하면 <b style="color:#059669">초록색</b>이 되고 다음 단계가 열려요. 해결한 단계는 눌러서 다시 볼 수 있어요.'},
+  {el:'.qbox', title:'질문에 답하기',
+   body:'답을 쓰고 <b>제출하기</b>를 누르면 바로 피드백이 나와요.<br>막히면 <b>💡 힌트</b>, 3번 틀리면 <b>풀이 보기</b>가 나타나요. 틀려도 괜찮아요!'},
+  {el:'#chatCard', title:'AI 도우미',
+   body:'궁금한 것을 물어보면 AI가 <b>정답 대신 생각할 실마리</b>를 줘요. (선생님이 AI를 켰을 때만 보여요)'},
+  {el:'#golfBtn', title:'보너스 게임 ⛳',
+   body:'8단계를 모두 마치면 <b>정적분 골프</b>가 열려요. 배운 정적분으로 골프를 쳐 보세요!'},
+  {el:'#tourBtn', title:'안내 다시 보기',
+   body:'이 안내는 언제든 <b>ⓘ 사용 안내</b> 버튼으로 다시 볼 수 있어요.<br>(<b>⚙ 관리자</b>는 선생님용 설정이에요.) 그럼 1단계부터 시작해 볼까요?'},
+];
+const GOLF_TOUR=[
+  {title:'정적분 골프에 온 걸 환영해요! ⛳',
+   body:'목표값에 맞도록 <b>끝점 b</b>를 정해 공을 홀에 넣는 게임이에요. 어떻게 하는지 먼저 둘러볼게요.'},
+  {el:'#g_iFormula', title:'이번 홀의 목표',
+   body:'이 식이 성립하는 <b style="color:#d97706">b</b>를 찾는 게 목표예요. 정적분은 a부터 b까지의 (부호 있는) 넓이였죠?'},
+  {el:'#g_iParts', title:'식을 나눠 보면',
+   body:'함수, 시작점 a, 찾아야 할 b, 목표값을 하나씩 보여줘요.'},
+  {el:'.gi-guess', title:'먼저 예상해 보기',
+   body:'그래프를 보기 전에 b를 어림해서 적어 보세요. 안 적어도 되지만, <b>예상하고 확인하면</b> 실력이 훨씬 빨리 늘어요.'},
+  {el:'#g_iStart', title:'코스로 나가기',
+   body:'누르면 그래프가 나와요. 그래프를 <b>좌우로 끌다가 손을 떼면 샷!</b><br>끄는 동안엔 값이 안 보이니 <b>모눈 한 칸 = 넓이 1</b>로 어림하세요.'},
+  {el:'#g_cv', title:'그래프를 끌어 b 정하기',
+   body:'그래프를 좌우로 끌면 색칠된 넓이가 바뀌어요. 손을 떼는 순간 샷이에요.'},
+  {el:'#g_course', title:'공이 날아가는 페어웨이',
+   body:'정적분 값만큼 공이 날아가요. <b>x축 아래 넓이</b>는 공을 <b>뒤로</b> 보내요!'},
+  {el:'#g_hintBtn', title:'캐디의 조언',
+   body:'막히면 힌트를 받을 수 있어요. 대신 <b>1타가 더해져요</b>.'},
+  {el:'#g_score', title:'스코어카드',
+   body:'홀마다 기준 타수가 있어요. 더 적게 치면 <b>버디·이글</b>, 한 번에 넣으면 <b>홀인원</b>!'},
+  {el:()=>document.getElementById('g_code')?.closest('.card'), title:'코스 번호',
+   body:'문제 은행에서 9문제를 무작위로 뽑아요. <b>같은 번호</b>를 입력하면 친구와 같은 코스로 대결할 수 있고, <b>🔀 새 코스</b>를 누르면 다른 문제가 나와요.'},
+  {el:'#g_tour', title:'안내 다시 보기',
+   body:'이 안내는 <b>ⓘ 안내</b> 버튼으로 다시 볼 수 있어요. 그럼 티샷하러 가 볼까요? 🏌️'},
+];
+$('tourBtn').onclick=()=>Tour.start('main',MAIN_TOUR,'정적분 탐구실');
+
+/* ====================== 보너스 게임: 정적분 골프 ====================== */
+(function(){
+
+/* ============ 문제 은행 (약 100문제) ============
+   단계 A: 직사각형(상수함수)   B: 삼각형·사다리꼴(일차함수)   C: 곡선(공식 없음)
+   D: x축 아래로 내려가는 직선(부호)   E: x축 아래로 내려가는 곡선(부호+곡선)
+   한 코스 = A 1 + B 2 + C 2 + D 2 + E 2 = 9홀 (쉬운 것부터) */
+const nf=v=>(Math.round(v*100)/100).toString();
+function linLabel(m,c){
+  const mt = m===1?'x': m===-1?'−x': m===0.5?'x ÷ 2': (m<0?'−':'')+Math.abs(m)+'x';
+  const ct = c>0?` + ${nf(c)}`: c<0?` − ${nf(-c)}`:'';
+  return 'f(x) = '+mt+ct;
+}
+const CURVES={
+  sq:   {f:x=>x*x,             l:'f(x) = x²'},
+  sq1p: {f:x=>x*x+1,           l:'f(x) = x² + 1'},
+  sqrt: {f:x=>x>=0?Math.sqrt(x):0, l:'f(x) = √x'},
+  cub:  {f:x=>x*x*x/4,         l:'f(x) = x³ ÷ 4'},
+  m4sq: {f:x=>4-x*x,           l:'f(x) = 4 − x²'},
+  sqm1: {f:x=>x*x-1,           l:'f(x) = x² − 1'},
+  sqm4: {f:x=>x*x-4,           l:'f(x) = x² − 4'},
+  sqm2x:{f:x=>x*x-2*x,         l:'f(x) = x² − 2x'},
+  cubmx:{f:x=>x*x*x/4-x,       l:'f(x) = x³ ÷ 4 − x'},
+  q13:  {f:x=>x*x-4*x+3,       l:'f(x) = x² − 4x + 3'},
+};
+const BANK_RAW={
+  // [높이 c, 시작 a, 목표 T]
+  A:[[2,0,6],[2,0,5],[2,1,4],[2,1,7],[1,0,4],[1,1,3],[3,0,6],[3,0,12],[3,1,9],[3,0,7.5],[4,0,10],[4,1,8],[5,0,10],[1,0,2.5]],
+  // 원점을 지나는 직선 [기울기 k, a, T]  /  절편이 있는 직선 [m, c, a, T]
+  B0:[[1,0,2],[1,0,4.5],[1,0,8],[1,0,12.5],[1,1,1.5],[1,1,4],[1,1,7.5],[2,0,4],[2,0,9],[2,0,1],[2,0,6.25],[0.5,0,1],[0.5,0,4],[0.5,0,2.25],[2,1,8]],
+  B1:[[1,1,0,4],[1,1,0,7.5],[1,1,0,1.5],[1,1,0,12],[1,2,0,2.5],[1,2,0,6],[1,2,0,10.5],[2,1,0,2],[2,1,0,6],[2,1,0,12],[1,1,1,2.5],[0.5,1,0,3]],
+  // 곡선 [곡선, a, T, (bmax)]
+  C:[['sq',0,1],['sq',0,3],['sq',0,5],['sq',0,9],['sq',1,3],['sq',1,8],['sq1p',0,2],['sq1p',0,4],['sq1p',0,6],
+     ['sqrt',0,1],['sqrt',0,2],['sqrt',0,3],['sqrt',0,4],['cub',0,1],['cub',0,2],['cub',0,4],['m4sq',0,3,2],['m4sq',0,5,2]],
+  // 부호 있는 직선 [m, c, a, T, bmax]
+  D:[[-1,2,0,2,5],[-1,2,0,0,5],[-1,2,0,1.5,5],[-1,2,0,-2.5,5.5],[-1,3,0,4.5,6.5],[-1,3,0,0,6.5],[-1,3,0,4,6.5],
+     [-1,1,0,0,3.5],[-1,1,0,-1.5,4],[-1,1,0,0.5,3.5],[1,-2,0,-2,5],[1,-2,0,0,5.5],[1,-2,0,2.5,6],
+     [1,-1,0,-0.5,4],[1,-1,0,0,4],[1,-1,0,1.5,4],[1,-1,0,4,5],[1,-3,0,-4.5,7],[1,-3,0,0,7],
+     [-2,4,0,4,5],[-2,4,0,0,5],[-2,4,0,3,5],[1,-2,1,0,4.5],[1,-2,1,-0.5,4.5],[-1,3,1,2,6],[-1,3,1,0,6]],
+  // 부호 있는 곡선 [곡선, a, T, bmax]
+  E:[['sqm1',0,0,3],['sqm1',0,-0.5,3],['sqm1',0,2,3],['sqm1',0,6,3.5],['sqm4',0,0,4.5],['sqm4',0,-5,4.5],
+     ['sqm2x',0,0,4],['sqm2x',0,-1,4],['sqm2x',0,1.5,4],['m4sq',0,0,4.5],['m4sq',0,-2,4.5],
+     ['cubmx',0,0,3.5],['cubmx',0,-1,3.5],['cubmx',0,4,4],['q13',0,0,4.5],['q13',0,1,4.5]],
+};
+function hintFor(p){
+  const T=nf(p.T);
+  switch(p.kind){
+    case 'A': return p.a===0?`직사각형이에요! 높이가 ${nf(p.c)}일 때, 넓이를 ${T}에 맞추려면 가로는 얼마여야 할까요?`
+                            :`직사각형이에요! 가로는 (b − ${nf(p.a)}), 높이는 ${nf(p.c)}. 넓이를 ${T}에 맞추려면?`;
+    case 'B0': return p.a===0?'삼각형이에요. 밑변이 b일 때 높이는 f(b)예요. 삼각형 넓이 = 밑변 × 높이 ÷ 2'
+                             :`사다리꼴이에요. 큰 삼각형(0부터 b)에서 작은 삼각형(0부터 ${nf(p.a)})을 빼서 생각해 보세요.`;
+    case 'B1': return `영역을 아래쪽 직사각형(높이 ${nf(p.c+p.m*p.a)})과 위쪽 삼각형으로 나눠서 생각해 보세요.`;
+    case 'C':  return '곡선이라 넓이 공식이 없어요. 모눈 한 칸(넓이 1)이 몇 개쯤 들어가는지 세어서 어림해 보세요.';
+    case 'D':  return `그래프는 x = ${nf(-p.c/p.m)}에서 x축과 만나요. 그 앞과 뒤, 어느 쪽 넓이가 +이고 어느 쪽이 −인지 생각해 보세요.`
+                      +(p.T===0?' 목표가 0이니까 + 넓이와 − 넓이가 같아져야 해요.':'');
+    case 'E':  return 'x축 위(+) 부분과 아래(−) 부분을 나눠서, 모눈 칸을 세어 크기를 비교해 보세요.'
+                      +(p.T===0?' 목표 0 → 두 넓이가 같아지는 곳!':'');
+  }
+}
+function integralRaw(f,a,bb){ if(bb===a) return 0; const n=200,h=(bb-a)/n; let s=f(a)+f(bb); for(let i=1;i<n;i++) s+=f(a+i*h)*(i%2?4:2); return s*h/3; }
+function finishProblem(p, givenBmax){
+  // 목표값에 도달하는 b를 찾아 bmax·판정 범위를 정해요
+  const lim=givenBmax||8; let best=p.a, bd=1e9;
+  for(let x=p.a+0.01;x<=lim+1e-9;x+=0.01){const d=Math.abs(integralRaw(p.f,p.a,x)-p.T); if(d<bd-1e-9){bd=d;best=x}}
+  p.bstar=best; p.ok=bd<0.006*Math.abs(p.f(best))+0.03;
+  p.bmax = givenBmax || Math.min(6.5, Math.max(3, Math.ceil(best+1)));
+  p.tol = Math.max(0.15, 0.03*Math.abs(p.T), 0.03*Math.abs(p.f(best))+0.05);
+  p.mixed=[...Array(81)].some((_,i)=>p.f(p.a+(p.bmax-p.a)*i/80)<-1e-9);
+  p.hint=hintFor(p);
+  return p;
+}
+const BANK={A:[],B:[],C:[],D:[],E:[]};
+BANK_RAW.A.forEach(([c,a,T])=>BANK.A.push(finishProblem({kind:'A',tier:'A',c,a,T,f:x=>c,label:'f(x) = '+nf(c),par:2})));
+BANK_RAW.B0.forEach(([k,a,T])=>BANK.B.push(finishProblem({kind:'B0',tier:'B',m:k,c:0,a,T,f:x=>k*x,label:linLabel(k,0),par:a===0?2:3})));
+BANK_RAW.B1.forEach(([m,c,a,T])=>BANK.B.push(finishProblem({kind:'B1',tier:'B',m,c,a,T,f:x=>m*x+c,label:linLabel(m,c),par:3})));
+BANK_RAW.C.forEach(([id,a,T,bm])=>BANK.C.push(finishProblem({kind:'C',tier:'C',a,T,f:CURVES[id].f,label:CURVES[id].l,par:3},bm)));
+BANK_RAW.D.forEach(([m,c,a,T,bm])=>BANK.D.push(finishProblem({kind:'D',tier:'D',m,c,a,T,f:x=>m*x+c,label:linLabel(m,c),par:3},bm)));
+BANK_RAW.E.forEach(([id,a,T,bm])=>BANK.E.push(finishProblem({kind:'E',tier:'E',a,T,f:CURVES[id].f,label:CURVES[id].l,par:4},bm)));
+const BANK_SIZE=Object.values(BANK).reduce((s,l)=>s+l.length,0);
+window._golfBank=BANK; window._golfMake=c=>makeCourse(c); // (점검용)
+
+/* 코스 번호(1000~9999)로 같은 문제 세트를 다시 만들 수 있어요 */
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function makeCourse(code){
+  const r=rng(code*7919), pick=(list,k)=>{const a=list.filter(p=>p.ok).slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,k)};
+  return [...pick(BANK.A,1),...pick(BANK.B,2),...pick(BANK.C,2),...pick(BANK.D,2),...pick(BANK.E,2)];
+}
+let courseCode=1000+Math.floor(Math.random()*9000);
+let HOLES=makeCourse(courseCode);
+const N=HOLES.length;
+
+/* ============ 상태 ============ */
+let hi=0, b=0, strokes=0, done=false, dragging=false, shots=[], ball=null, anim=null;
+const card=Array(N).fill(null);
+const $=id=>document.getElementById(id);
+const fmt=v=>{v=Math.round(v*100)/100; return (Object.is(v,-0)?0:v).toString()};
+
+function integral(f,a,bb){ if(bb===a) return 0; const n=400,h=(bb-a)/n; let s=f(a)+f(bb);
+  for(let i=1;i<n;i++) s+=f(a+i*h)*(i%2?4:2); return s*h/3; }
+
+/* ============ 그래프 ============ */
+const cv=$('g_cv'),ctx=cv.getContext('2d');
+let view={};
+function setupView(){
+  const H=HOLES[hi]; const xmin=H.a-0.6, xmax=H.bmax+0.4;
+  let ymin=0,ymax=0; for(let i=0;i<=200;i++){const y=H.f(xmin+(xmax-xmin)*i/200);ymin=Math.min(ymin,y);ymax=Math.max(ymax,y)}
+  ymin=Math.floor(ymin-0.4); ymax=Math.ceil(ymax+0.4);
+  view={xmin,xmax,ymin,ymax,L:20,R:20,T:16,B:30};
+}
+const X=x=>view.L+(x-view.xmin)/(view.xmax-view.xmin)*(cv._w-view.L-view.R);
+const Y=y=>view.T+(view.ymax-y)/(view.ymax-view.ymin)*(cv._h-view.T-view.B);
+const invX=px=>view.xmin+(px-view.L)/(cv._w-view.L-view.R)*(view.xmax-view.xmin);
+
+function drawGraph(){
+  fitCanvas(cv,0.52,0,240,Math.round(innerHeight*0.38));
+  const H=HOLES[hi],W=cv._w,Hh=cv._h; ctx.clearRect(0,0,W,Hh);
+  // 모눈 (한 칸 = 1)
+  ctx.lineWidth=1; ctx.font='14px sans-serif'; ctx.fillStyle='#64748b';
+  for(let x=Math.ceil(view.xmin);x<=view.xmax;x++){ctx.strokeStyle='#e2e8f0';ctx.beginPath();ctx.moveTo(X(x),view.T);ctx.lineTo(X(x),Hh-view.B);ctx.stroke();
+    ctx.textAlign='center'; ctx.fillText(x,X(x),Hh-view.B+18);}
+  for(let y=view.ymin;y<=view.ymax;y++){ctx.strokeStyle='#e2e8f0';ctx.beginPath();ctx.moveTo(view.L,Y(y));ctx.lineTo(W-view.R,Y(y));ctx.stroke();
+    if(y!==0){ctx.textAlign='right';ctx.fillText(y,X(0)-5,Y(y)+5);}}
+  // 색칠 (위 +, 아래 −)
+  if(b>H.a){
+    const steps=200;
+    for(const sign of [1,-1]){
+      ctx.fillStyle=sign>0?'rgba(37,99,235,.35)':'rgba(220,38,38,.32)';
+      ctx.beginPath(); ctx.moveTo(X(H.a),Y(0));
+      for(let i=0;i<=steps;i++){const x=H.a+(b-H.a)*i/steps; let y=H.f(x); y=sign>0?Math.max(y,0):Math.min(y,0); ctx.lineTo(X(x),Y(y));}
+      ctx.lineTo(X(b),Y(0)); ctx.closePath(); ctx.fill();
+    }
+  }
+  // 축
+  ctx.strokeStyle='#334155';ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.moveTo(view.L,Y(0));ctx.lineTo(W-view.R,Y(0));ctx.stroke();
+  ctx.beginPath();ctx.moveTo(X(0),view.T);ctx.lineTo(X(0),Hh-view.B);ctx.stroke();
+  // 곡선
+  ctx.strokeStyle='#7c3aed';ctx.lineWidth=3;ctx.beginPath();
+  for(let i=0;i<=400;i++){const x=view.xmin+(view.xmax-view.xmin)*i/400,y=H.f(x); i?ctx.lineTo(X(x),Y(y)):ctx.moveTo(X(x),Y(y));}
+  ctx.stroke();
+  ctx.fillStyle='#7c3aed';ctx.font='bold 17px sans-serif';ctx.textAlign='left';ctx.fillText(H.label,view.L+8,view.T+18);
+  // 이전 샷 위치 (희미하게)
+  ctx.setLineDash([3,4]);ctx.strokeStyle='rgba(15,23,42,.25)';ctx.lineWidth=1;
+  shots.forEach(s=>{ctx.beginPath();ctx.moveTo(X(s.b),view.T);ctx.lineTo(X(s.b),Hh-view.B);ctx.stroke();});
+  ctx.setLineDash([]);
+  // b 손잡이
+  ctx.strokeStyle='#0f172a';ctx.lineWidth=2.5;ctx.beginPath();ctx.moveTo(X(b),view.T);ctx.lineTo(X(b),Hh-view.B);ctx.stroke();
+  ctx.fillStyle=dragging?'#f59e0b':'#0f172a';ctx.beginPath();ctx.arc(X(b),Hh-view.B,9,0,7);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText('b',X(b),Hh-view.B+4);
+  ctx.fillStyle='#0f172a';ctx.font='bold 15px sans-serif';ctx.fillText('a',X(H.a),view.T+14);
+}
+
+/* ============ 페어웨이(수직선) ============ */
+const co=$('g_course'),cx=co.getContext('2d');
+let cview={};
+function setupCourse(){
+  const H=HOLES[hi]; let lo=Math.min(0,H.T),hi2=Math.max(0,H.T);
+  for(let i=0;i<=100;i++){const v=integral(H.f,H.a,H.a+(H.bmax-H.a)*i/100);lo=Math.min(lo,v);hi2=Math.max(hi2,v)}
+  const pad=Math.max(1,(hi2-lo)*0.08); cview={lo:Math.floor(lo-pad),hi:Math.ceil(hi2+pad)};
+}
+const CX=v=>30+(v-cview.lo)/(cview.hi-cview.lo)*(co._w-60);
+function drawCourse(){
+  const oldW=co._w; fitCanvas(co,0,130);
+  if(oldW && oldW!==co._w && ball && !anim && shots.length) ball={x:CX(shots[shots.length-1].v),y:co._h-43};
+  const H=HOLES[hi],W=co._w,Hh=co._h,gy=Hh-38; cx.clearRect(0,0,W,Hh);
+  // 그린
+  cx.fillStyle='#4ade80'; cx.beginPath(); cx.ellipse(CX(H.T),gy,Math.max(26,CX(H.T+H.tol*4)-CX(H.T)),12,0,0,7); cx.fill();
+  // 눈금선
+  cx.strokeStyle='#14532d';cx.lineWidth=2;cx.beginPath();cx.moveTo(20,gy);cx.lineTo(W-20,gy);cx.stroke();
+  const step=(cview.hi-cview.lo)>20?5:(cview.hi-cview.lo)>10?2:1;
+  cx.font='13px sans-serif';cx.fillStyle='#14532d';cx.textAlign='center';cx.lineWidth=1;
+  for(let v=Math.ceil(cview.lo/step)*step;v<=cview.hi;v+=step){cx.beginPath();cx.moveTo(CX(v),gy-5);cx.lineTo(CX(v),gy+5);cx.stroke();cx.fillText(v,CX(v),gy+20);}
+  // 티(0)
+  cx.fillStyle='#78350f';cx.fillRect(CX(0)-3,gy-10,6,10);
+  cx.font='bold 12px sans-serif';cx.fillText('출발(0)',CX(0),gy+34);
+  // 깃발
+  const fx=CX(H.T); cx.fillStyle='#111';cx.beginPath();cx.ellipse(fx,gy,7,3,0,0,7);cx.fill();
+  cx.strokeStyle='#111';cx.lineWidth=2;cx.beginPath();cx.moveTo(fx,gy);cx.lineTo(fx,gy-62);cx.stroke();
+  cx.fillStyle='#dc2626';cx.beginPath();cx.moveTo(fx,gy-62);cx.lineTo(fx+26,gy-54);cx.lineTo(fx,gy-46);cx.fill();
+  cx.fillStyle='#111';cx.font='bold 13px sans-serif';cx.fillText('목표 '+fmt(H.T),fx,gy-68);
+  // 이전 공 자국
+  shots.slice(0,-1).forEach(s=>{cx.fillStyle='rgba(255,255,255,.55)';cx.beginPath();cx.arc(CX(s.v),gy-5,4,0,7);cx.fill();});
+  // 공
+  if(ball){cx.fillStyle='#000';cx.globalAlpha=.2;cx.beginPath();cx.ellipse(ball.x,gy,6,2,0,0,7);cx.fill();cx.globalAlpha=1;
+    cx.fillStyle='#fff';cx.strokeStyle='#334155';cx.lineWidth=1.5;cx.beginPath();cx.arc(ball.x,ball.y,7,0,7);cx.fill();cx.stroke();}
+  if(dragging){cx.fillStyle='#14532d';cx.font='bold 16px sans-serif';cx.fillText('? 손을 떼면 샷!',CX(0)+ (CX(H.T)>CX(0)?70:-70),gy-30);}
+}
+
+/* ============ 조작 ============ */
+function setB(px){const H=HOLES[hi]; let v=invX(px); v=Math.max(H.a,Math.min(H.bmax,v)); b=Math.round(v*20)/20; $('g_bRng').value=b; $('g_bTxt').textContent='= '+fmt(b); drawGraph(); drawCourse();}
+function evPx(e){const r=cv.getBoundingClientRect();return (e.clientX-r.left)*cv._w/r.width}
+cv.addEventListener('pointerdown',e=>{if(done||anim)return;dragging=true;cv.setPointerCapture(e.pointerId);setB(evPx(e))});
+cv.addEventListener('pointermove',e=>{if(dragging)setB(evPx(e))});
+cv.addEventListener('pointerup',()=>{if(!dragging)return;dragging=false;shoot()});
+cv.addEventListener('pointercancel',()=>{dragging=false;drawGraph();drawCourse()});
+$('g_bRng').addEventListener('input',e=>{if(done||anim)return;dragging=true;b=+e.target.value;$('g_bTxt').textContent='= '+fmt(b);drawGraph();drawCourse()});
+$('g_bRng').addEventListener('change',()=>{if(!dragging)return;dragging=false;shoot()});
+
+function shoot(){
+  const H=HOLES[hi]; if(b<=H.a){say('','끝점 b를 a보다 오른쪽으로 끌어 주세요.');drawGraph();drawCourse();return}
+  strokes++; const v=integral(H.f,H.a,b); shots.push({b,v}); updateHeader();
+  const from=ball?ball.x:CX(0), to=CX(v), gy=co._h-38, t0=performance.now(), dur=900, peak=Math.min(70,20+Math.abs(to-from)*0.25);
+  anim=true;
+  (function step(t){const k=Math.min(1,(t-t0)/dur); ball={x:from+(to-from)*k,y:gy-5-peak*4*k*(1-k)}; drawCourse(); drawGraph();
+    if(k<1) requestAnimationFrame(step); else {anim=null; judge(v);} })(t0);
+}
+function judge(v){
+  const H=HOLES[hi], d=v-H.T, ad=Math.abs(d);
+  if(ad<=H.tol){ finishHole(); return; }
+  const dir = d<0 ? '작아요 (공이 깃발 왼쪽)' : '커요 (공이 깃발 오른쪽)';
+  let tip='';
+  if(ad<=H.tol*4) {say('near',`⛳ 그린에 올라왔어요! 정적분 값 <b>${fmt(v)}</b>, 목표까지 조금만 더! (${dir})`);}
+  else{
+    // 넓이를 늘려야 하는지/줄여야 하는지에 대한 생각거리 (정답 위치는 알려주지 않음)
+    const fb=H.f(b);
+    if(d<0 && fb<0) tip=' 🤔 지금 b 근처는 x축 아래예요. b를 더 늘리면 값이 커질까요, 작아질까요?';
+    else if(d>0 && fb<0) tip=' 🤔 x축 아래 넓이는 값을 줄여요. 그걸 이용해 볼까요?';
+    else if(H.mixed) tip=d<0?' 🤔 값을 키우려면 b를 어느 쪽으로 움직여야 할까요? 그래프 모양을 잘 보세요.':' 🤔 값을 줄이는 방법이 b를 왼쪽으로 옮기는 것뿐일까요? 그래프 오른쪽을 잘 보세요.';
+    else if(d<0) tip=' 넓이를 조금 더 키워 볼까요?';
+    else tip=' 넓이를 줄여 볼까요?';
+    say('far',`🏌️ 정적분 값 <b>${fmt(v)}</b> — 목표보다 ${dir}.`+tip);
+  }
+  if(strokes>=8){ say('far',`8타가 되어 이번 홀은 여기까지! 정답은 b = <b>${fmt(solveB(H))}</b>였어요.`); card[hi]=strokes+1; done=true; renderScore(); updateHeader(); $('g_nextBtn').style.display='inline-block'; }
+}
+function solveB(H){let best=H.a,bd=1e9;for(let x=H.a;x<=H.bmax+1e-9;x+=0.01){const d=Math.abs(integral(H.f,H.a,x)-H.T);if(d<bd){bd=d;best=x}}return best}
+function finishHole(){
+  const H=HOLES[hi]; done=true; card[hi]=strokes; renderScore(); updateHeader();
+  const diff=strokes-H.par;
+  const names={'-3':'알바트로스','-2':'이글','-1':'버디','0':'파','1':'보기','2':'더블 보기'};
+  const name= strokes===1?'홀인원':(names[diff]||(diff>0?`+${diff}`:'대단해요'));
+  const emoji= strokes===1?'🏆':diff<0?'🦅':diff===0?'👏':'🙂';
+  say('good',`${emoji} <b>${name}!</b> ${strokes}타 만에 성공! b = ${fmt(b)}일 때 정적분 값이 ${fmt(shots[shots.length-1].v)}이에요.`);
+  $('g_nextBtn').style.display='inline-block'; $('g_nextBtn').textContent= hi<N-1?'다음 홀 ▶':'최종 결과 보기 🏁';
+}
+$('g_nextBtn').onclick=()=>{ if(hi<N-1){hi++;loadHole()} else showEnd(); };
+$('g_hintBtn').onclick=()=>{ if(done)return; strokes++; updateHeader(); say('',`💡 캐디: ${HOLES[hi].hint} <span class="small">(벌타 +1)</span>`); $('g_hintBtn').disabled=true; };
+
+function say(kind,html){const m=$('g_msg');m.className='msg '+kind;m.innerHTML=html}
+function totalRel(){let t=0,any=false;card.forEach((s,i)=>{if(s!=null){t+=s-HOLES[i].par;any=true}});return any?t:0}
+function relTxt(t){return t===0?'E':(t>0?'+'+t:''+t)}
+function updateHeader(){$('g_hHole').textContent=hi+1;$('g_hStroke').textContent=strokes;$('g_hTotal').textContent=relTxt(totalRel())}
+function renderScore(){
+  let h='<tr><th>홀</th><th>기준</th><th>타수</th></tr>';
+  HOLES.forEach((H,i)=>{h+=`<tr><td class="${i===hi?'cur':''}">${i+1}</td><td>${H.par}</td><td class="${i===hi?'cur':''}">${card[i]??'-'}</td></tr>`});
+  const par=HOLES.reduce((s,H)=>s+H.par,0), tot=card.reduce((s,v)=>s+(v||0),0);
+  h+=`<tr><th>합계</th><th>${par}</th><th>${tot||'-'}</th></tr>`; $('g_score').innerHTML=h;
+}
+const INT=(a,b,body)=>`<span class="int">∫</span><span class="lim"><span>${b}</span><span>${a}</span></span>${body}`;
+function loadHole(){
+  const H=HOLES[hi]; strokes=0; done=false; shots=[]; ball=null;
+  setupView(); setupCourse(); b=H.a;
+  $('g_bRng').min=H.a; $('g_bRng').max=H.bmax; $('g_bRng').value=b; $('g_bTxt').textContent='= '+fmt(b);
+  $('g_holeTag').textContent='HOLE '+(hi+1);
+  $('g_targetTxt').innerHTML=INT(H.a,'<b style="color:#d97706">b</b>',H.label.replace('f(x) = ','(')+') dx')+' = '+fmt(H.T);
+  $('g_parTxt').textContent='기준 타수 '+H.par;
+  $('g_nextBtn').style.display='none'; $('g_hintBtn').disabled=false;
+  // 1) 먼저 수식에 집중하는 인트로 화면
+  $('g_iHole').textContent=`HOLE ${hi+1} · 기준 타수 ${H.par}`;
+  $('g_iFormula').innerHTML=INT(H.a,'<b class="bmark">b</b>',H.label.replace('f(x) = ','(')+') dx')+' = '+fmt(H.T);
+  $('g_iParts').innerHTML=`<span>함수 ${H.label}</span><span>시작 a = ${fmt(H.a)}</span><span class="q">끝 b = ❓</span><span>목표 값 = ${fmt(H.T)}</span>`;
+  $('g_iWarn').textContent = H.mixed ? '⚠ 이 그래프는 x축 아래로 내려가요. x축 아래 넓이는 −로 계산돼요!' : '';
+  $('g_iGuess').value='';
+  $('g_intro').style.display='flex'; $('g_play').style.display='none';
+  renderScore(); updateHeader();
+}
+function startPlay(){
+  const H=HOLES[hi]; const g=parseFloat(($('g_iGuess').value||'').replace(/[^\d.\-]/g,''));
+  $('g_intro').style.display='none'; $('g_play').style.display='block';
+  say('', (isFinite(g)?`예상한 b ≈ <b>${fmt(g)}</b>, 맞는지 직접 쳐서 확인해 봐요! `:'')+
+    `목표값 <b>${fmt(H.T)}</b>에 맞도록 그래프를 끌어 b를 정하고, 손을 떼면 샷!`);
+  drawGraph(); drawCourse();
+}
+$('g_iStart').onclick=startPlay;
+$('g_iGuess').onkeydown=e=>{if(e.key==='Enter')startPlay()};
+function showEnd(){
+  const t=totalRel(), tot=card.reduce((s,v)=>s+v,0), par=HOLES.reduce((s,H)=>s+H.par,0);
+  const [big,title,line]= t<=-3?['🏆','정적분 마스터!','넓이를 보는 눈이 프로 선수급이에요.']
+    : t<=0?['🥇','훌륭한 골퍼!','기준 타수 안에 코스를 돌았어요.']
+    : t<=6?['🥈','좋은 경기!','넓이를 어림하는 감각이 많이 늘었어요.']
+    : ['🌱','도전 완료!','다시 돌면 분명 타수가 줄어들 거예요.'];
+  $('g_pop').innerHTML=`<div class="big">${big}</div><h2>${title}</h2><p>총 ${tot}타 (기준 ${par}타, ${relTxt(t)})</p><p class="small">${line}<br>x축 아래 넓이가 공을 뒤로 보낸 것, 기억나죠? 그게 바로 <b>부호가 있는 넓이</b>예요.</p>
+    <p class="small">코스 #${courseCode}</p>
+    <div class="row" style="justify-content:center"><button id="g_again">🔀 새 코스 도전</button><button class="ghost" id="g_same">같은 코스 다시</button></div>`;
+  $('g_over').classList.add('show');
+  $('g_again').onclick=()=>{$('g_over').classList.remove('show');setCourse(1000+Math.floor(Math.random()*9000))};
+  $('g_same').onclick=()=>{$('g_over').classList.remove('show');setCourse(courseCode)};
+}
+function setCourse(code){
+  courseCode=code; HOLES=makeCourse(code); card.fill(null); hi=0;
+  $('g_code').textContent='#'+code; loadHole();
+}
+function midGame(){return card.some(v=>v!=null)||strokes>0}
+$('g_newCourse').onclick=()=>{ if(midGame()&&!confirm('지금 코스를 그만두고 새 코스를 시작할까요?'))return; setCourse(1000+Math.floor(Math.random()*9000)); };
+$('g_enterCode').onclick=()=>{
+  const v=prompt('코스 번호(1000~9999)를 입력하세요.',''); if(v===null)return;
+  const n=parseInt(v,10); if(!(n>=1000&&n<=9999)){alert('1000부터 9999 사이의 숫자를 입력해 주세요.');return}
+  if(midGame()&&!confirm(`지금 코스를 그만두고 코스 #${n}을 시작할까요?`))return; setCourse(n);
+};
+$('g_code').textContent='#'+courseCode; $('g_bankSize').textContent=BANK_SIZE;
+
+let started=false;
+window.openGolf=function(){ $('golfApp').classList.add('show'); document.body.style.overflow='hidden';
+  if(!started){started=true;loadHole();} else {drawGraph();drawCourse();}
+  if(!Tour.seen('golf')) setTimeout(()=>Tour.start('golf',GOLF_TOUR,'정적분 골프'),300); };
+$('g_tour').onclick=()=>Tour.start('golf',GOLF_TOUR,'정적분 골프');
+window.closeGolf=function(){ $('golfApp').classList.remove('show'); document.body.style.overflow=''; };
+$('g_back').onclick=closeGolf;
+window.addEventListener('resize',()=>{ if(started && $('golfApp').classList.contains('show') && !anim){drawGraph();drawCourse();} });
+})();
+window.addEventListener('resize',()=>{ clearTimeout(window._rz); window._rz=setTimeout(()=>refresh(),80); });
+/* ====================== 시작 ====================== */
+updateBadge();
+refreshStatus();
+loadMission();
+// 처음 접속했다면 사용 안내를 자동으로 시작해요
+if(!Tour.seen('main')) setTimeout(()=>Tour.start('main',MAIN_TOUR,'정적분 탐구실'),400);
+</script>
+</body>
+</html>
