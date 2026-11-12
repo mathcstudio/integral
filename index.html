@@ -189,7 +189,7 @@ input[type=range]{height:30px;accent-color:var(--blue)}
   <div><h1 style="display:inline">∫ 정적분 탐구실</h1><span class="sub">직사각형을 쪼개며 정적분의 뜻을 찾아가요</span></div>
   <div class="hbtns">
     <button id="tourBtn" class="ghost" title="기능 안내를 다시 봐요">ⓘ 사용 안내</button>
-    <button id="golfBtn" class="ghost" title="8단계를 모두 마치면 열려요">🔒 보너스 게임</button>
+    <button id="golfBtn" class="ghost" title="모든 탐구 단계를 마치면 열려요">🔒 보너스 게임</button>
     <span id="aiBadge" class="badge">AI 피드백 꺼짐</span>
     <button class="ghost" id="adminBtn" title="관리자 모드">⚙ 관리자</button>
   </div>
@@ -198,6 +198,24 @@ input[type=range]{height:30px;accent-color:var(--blue)}
 <main>
   <!-- 왼쪽: 그래프 -->
   <section class="card">
+    <!-- 구분구적법 도입: 모눈 위의 호수 -->
+    <div id="shapePanel" style="display:none">
+      <canvas id="shapeCv" width="900" height="600"></canvas>
+      <div class="legend">
+        <span><i style="background:#7dd3fc"></i>호수</span>
+        <span><i style="background:rgba(236,72,153,.55);border:1px solid #db2777"></i>호수 안에 완전히 들어간 칸</span>
+        <span id="touchLegend"><i style="background:rgba(250,204,21,.55);border:1px solid #ca8a04"></i>호수에 조금이라도 걸친 칸</span>
+      </div>
+      <div class="row" id="gridBtns"><span class="small" style="margin-right:4px">모눈 한 칸의 한 변:</span></div>
+      <div class="row"><label class="small"><input type="checkbox" id="showTouch"> 걸친 칸도 세어 보기</label></div>
+      <div class="readout">
+        <div class="chip"><span class="k">모눈 한 칸의 넓이</span><span class="v" id="cellOut"></span></div>
+        <div class="chip"><span class="k">완전히 들어간 칸 넓이의 합</span><span class="v" id="innerOut"></span></div>
+        <div class="chip" id="outerChip"><span class="k">걸친 칸까지 센 넓이의 합</span><span class="v" id="outerOut"></span></div>
+        <div class="chip locked" id="pondChip"><span class="k">호수의 실제 넓이</span><span class="v" id="pondOut">🔒 1단계 후 공개</span></div>
+      </div>
+    </div>
+    <div id="graphPanel">
     <div id="graphWrap"><canvas id="cv" width="900" height="560"></canvas></div>
     <div class="legend">
       <span><i style="background:var(--blue-soft);border:1px solid var(--blue)"></i>x축 위 직사각형 (f(x) &gt; 0)</span>
@@ -227,9 +245,10 @@ input[type=range]{height:30px;accent-color:var(--blue)}
     <div class="readout">
       <div class="chip"><span class="k">한 직사각형의 가로 Δx = (b − a) ÷ n</span><span class="v" id="dxOut"></span></div>
       <div class="chip"><span class="k">직사각형 넓이의 합 S<sub>n</sub></span><span class="v" id="sOut"></span></div>
-      <div class="chip locked" id="exactChip"><span class="k">정적분 값 (참값)</span><span class="v" id="exOut">🔒 탐구 3단계 후 공개</span></div>
+      <div class="chip locked" id="exactChip"><span class="k">정적분 값 (참값)</span><span class="v" id="exOut">🔒 탐구 7단계 후 공개</span></div>
     </div>
     <div class="fbox" id="formulaRow"></div>
+    </div>
   </section>
 
   <!-- 오른쪽: 탐구 -->
@@ -368,7 +387,8 @@ const FUNCS = [
   {id:'cub',  label:'f(x) = x³ ÷ 4',     f:x=>x*x*x/4},
   {id:'sqrt', label:'f(x) = √x  (x ≥ 0)',f:x=>x>=0?Math.sqrt(x):NaN},
 ];
-const S = {fi:1, a:0, b:1, n:4, method:'right', showArea:false, maxN:4, exactUnlocked:false};
+const S = {fi:1, a:0, b:1, n:4, method:'right', showArea:false, maxN:4, exactUnlocked:false,
+  view:'graph', grid:2, gridsSeen:new Set([2]), showTouch:false, shapeTrue:false};
 
 const $ = id=>document.getElementById(id);
 const fmt = (v,d=4)=> (Math.abs(v)<1e-10?0:v).toFixed(d).replace(/\.?0+$/,'') || '0';
@@ -455,8 +475,81 @@ function draw(){
   ctx.fillStyle='#7c3aed';ctx.font='bold 17px sans-serif';ctx.textAlign='left';ctx.fillText(FUNCS[S.fi].label,L+10,T+18);
 }
 
+/* ====================== 구분구적법 도입: 모눈 위의 호수 ======================
+   가로 12 m × 세로 8 m 땅 위의 울퉁불퉁한 호수. 모눈 크기를 바꿔 가며
+   '완전히 들어간 칸'(작은 어림값)과 '걸친 칸'(큰 어림값)의 넓이 합을 비교해요. */
+const WORLD={w:12,h:8}, GRIDS=[2,1,0.5,0.25];
+const POND=(()=>{ const pts=[]; const N=360;
+  for(let i=0;i<N;i++){ const t=i/N*2*Math.PI;
+    const r=2.7*(1+0.16*Math.sin(2*t+0.5)+0.12*Math.cos(3*t)+0.07*Math.sin(5*t+1));
+    pts.push([6+1.45*r*Math.cos(t), 4+0.95*r*Math.sin(t)]); }
+  return pts; })();
+const POND_AREA=(()=>{let s=0;for(let i=0;i<POND.length;i++){const [x1,y1]=POND[i],[x2,y2]=POND[(i+1)%POND.length];s+=x1*y2-x2*y1}return Math.abs(s)/2})();
+function inPond(x,y){ let c=false; for(let i=0,j=POND.length-1;i<POND.length;j=i++){const [xi,yi]=POND[i],[xj,yj]=POND[j];
+  if(((yi>y)!==(yj>y)) && (x<(xj-xi)*(y-yi)/(yj-yi)+xi)) c=!c;} return c; }
+const cellCache={};
+function pondCells(g){ // 각 칸이 '완전히 안'인지, '걸쳤는지' 계산 (모눈 크기별로 한 번만)
+  if(cellCache[g]) return cellCache[g];
+  const cols=Math.round(WORLD.w/g), rows=Math.round(WORLD.h/g), k=Math.max(6,Math.ceil(g/0.04)), cells=[];
+  for(let cx=0;cx<cols;cx++) for(let cy=0;cy<rows;cy++){
+    const x0=cx*g,y0=cy*g; let all=true, any=false;
+    for(let i=0;i<=k&&(all||!any);i++) for(let j=0;j<=k;j++){
+      if(i!==0&&i!==k&&j!==0&&j!==k&&!(i%2===0&&j%2===0)) continue;
+      const v=inPond(x0+g*i/k,y0+g*j/k); if(v) any=true; else if(i===0||i===k||j===0||j===k) all=false;
+    }
+    if(!any) any=POND.some(([x,y])=>x>=x0&&x<=x0+g&&y>=y0&&y<=y0+g);
+    if(any) cells.push({x0,y0,inner:all});
+  }
+  const inner=cells.filter(c=>c.inner).length;
+  return cellCache[g]={cells,inner,touch:cells.length};
+}
+const shapeCv=$('shapeCv'), sctx=shapeCv.getContext('2d');
+function drawShape(){
+  fitCanvas(shapeCv,WORLD.h/WORLD.w,0,240,Math.round(innerHeight*0.5));
+  const W=shapeCv._w,H=shapeCv._h,pad=10, sc=Math.min((W-2*pad)/WORLD.w,(H-2*pad-18)/WORLD.h);
+  const ox=(W-sc*WORLD.w)/2, oy=pad;
+  const PX=x=>ox+x*sc, PY=y=>oy+(WORLD.h-y)*sc;
+  sctx.clearRect(0,0,W,H);
+  sctx.fillStyle='#dcfce7'; sctx.fillRect(PX(0),PY(WORLD.h),WORLD.w*sc,WORLD.h*sc);           // 땅
+  sctx.fillStyle='#7dd3fc'; sctx.strokeStyle='#0284c7'; sctx.lineWidth=2; sctx.beginPath();  // 호수
+  POND.forEach(([x,y],i)=>i?sctx.lineTo(PX(x),PY(y)):sctx.moveTo(PX(x),PY(y))); sctx.closePath(); sctx.fill();
+  const g=S.grid, data=pondCells(g);
+  data.cells.forEach(c=>{
+    if(c.inner){ sctx.fillStyle='rgba(236,72,153,.55)'; }
+    else if(S.showTouch){ sctx.fillStyle='rgba(250,204,21,.55)'; } else return;
+    sctx.fillRect(PX(c.x0),PY(c.y0+g),g*sc,g*sc);
+  });
+  sctx.beginPath(); POND.forEach(([x,y],i)=>i?sctx.lineTo(PX(x),PY(y)):sctx.moveTo(PX(x),PY(y))); sctx.closePath(); sctx.stroke();
+  sctx.strokeStyle='rgba(51,65,85,.55)'; sctx.lineWidth=g<0.5?0.5:1;                         // 모눈선
+  for(let x=0;x<=WORLD.w+1e-9;x+=g){sctx.beginPath();sctx.moveTo(PX(x),PY(0));sctx.lineTo(PX(x),PY(WORLD.h));sctx.stroke();}
+  for(let y=0;y<=WORLD.h+1e-9;y+=g){sctx.beginPath();sctx.moveTo(PX(0),PY(y));sctx.lineTo(PX(WORLD.w),PY(y));sctx.stroke();}
+  sctx.strokeStyle='#334155';sctx.lineWidth=1.5;sctx.strokeRect(PX(0),PY(WORLD.h),WORLD.w*sc,WORLD.h*sc);
+  // 축척 막대 (1 m)
+  sctx.fillStyle='#334155';sctx.fillRect(PX(0),PY(0)+8,sc,4);sctx.font='13px sans-serif';sctx.textAlign='left';
+  sctx.fillText('1 m',PX(0)+sc+6,PY(0)+15); sctx.textAlign='right'; sctx.fillText('가로 12 m × 세로 8 m',PX(WORLD.w),PY(0)+15);
+}
+const nfm=v=>(Math.round(v*1000)/1000).toString();
+function refreshShape(){
+  const g=S.grid, d=pondCells(g), a=g*g;
+  document.querySelectorAll('#gridBtns button').forEach(b=>b.classList.toggle('sec',+b.dataset.g!==g));
+  $('showTouch').checked=S.showTouch;
+  $('cellOut').textContent=`${nfm(g)} × ${nfm(g)} = ${nfm(a)} m²`;
+  $('innerOut').textContent=`${d.inner}칸 × ${nfm(a)} = ${nfm(d.inner*a)} m²`;
+  $('outerChip').style.display=S.showTouch?'':'none'; $('touchLegend').style.display=S.showTouch?'':'none';
+  $('outerOut').textContent=`${d.touch}칸 × ${nfm(a)} = ${nfm(d.touch*a)} m²`;
+  if(S.shapeTrue){$('pondChip').classList.remove('locked');$('pondOut').textContent=`약 ${POND_AREA.toFixed(1)} m²`;}
+  else{$('pondChip').classList.add('locked');$('pondOut').textContent='🔒 1단계 후 공개';}
+  drawShape();
+}
+GRIDS.forEach(g=>{const b=document.createElement('button');b.dataset.g=g;b.textContent=g+' m';
+  b.onclick=()=>{S.grid=g;S.gridsSeen.add(g);refresh()}; $('gridBtns').appendChild(b);});
+$('showTouch').onchange=e=>{S.showTouch=e.target.checked;refresh()};
+
 /* ====================== UI 동기화 ====================== */
 function refresh(){
+  const shape=S.view==='shape';
+  $('shapePanel').style.display=shape?'':'none'; $('graphPanel').style.display=shape?'none':'';
+  if(shape){ refreshShape(); return; }
   $('fSel').value=S.fi; $('mSel').value=S.method;
   $('aRng').value=S.a; $('bRng').value=S.b; $('nRng').value=S.n; $('showArea').checked=S.showArea;
   $('aVal').textContent=S.a; $('bVal').textContent=S.b; $('nVal').textContent=S.n; $('fLabel').textContent='';
@@ -464,7 +557,7 @@ function refresh(){
   $('dxOut').textContent=fmt(r.dx,4);
   $('sOut').textContent=S.hideSum?'✏ 직접 계산해 보세요':fmt(r.s,4);
   if(S.exactUnlocked){$('exactChip').classList.remove('locked');$('exOut').textContent=fmt(exact(),4);}
-  else{$('exactChip').classList.add('locked');$('exOut').textContent='🔒 탐구 3단계 후 공개';}
+  else{$('exactChip').classList.add('locked');$('exOut').textContent=`🔒 탐구 ${idxOf('limit')+1}단계 후 공개`;}
   const mname={left:'왼쪽 끝점',right:'오른쪽 끝점',mid:'가운데 점'}[S.method];
   const SIG='<span class="bigop"><span class="bo-t">n</span><span class="bo-s">Σ</span><span class="bo-b">k=1</span></span>';
   $('formulaRow').innerHTML=`<div class="formula"><span class="nw"><i>S</i><sub><i>n</i></sub></span> <span class="nw">= ${SIG}(높이) × (가로)</span> <span class="nw">= ${SIG}<i>f</i>(<i>x</i><sub><i>k</i></sub>) · Δ<i>x</i></span></div><div class="small">— 높이 <i>f</i>(<i>x</i><sub><i>k</i></sub>)는 <i>k</i>번째 칸의 ${mname}에서의 함숫값, 가로 Δ<i>x</i>는 모든 칸이 같아요.</div>`;
@@ -488,49 +581,90 @@ $('animBtn').onclick=()=>{
 /* ====================== 탐구 미션 ====================== */
 const INT = (a,b,body)=>`<span class="formula"><span class="int">∫</span><span class="lim"><span>${b}</span><span>${a}</span></span>${body}</span>`;
 const MISSIONS = [
- { title:'1. 공식이 없는 넓이', setup:{fi:1,a:0,b:2,n:2,method:'right',showArea:true}, hideSum:true,
-   story:`곡선 <b>y = x²</b>과 x축, x = 0, x = 2 사이의 <b>보라색 영역</b>을 보세요.<br>삼각형도, 사각형도 아니라서 <b>넓이 공식이 없어요!</b><br>그래서 우리가 아는 도형인 <b>직사각형 2개</b>로 대신 채워 봤어요.<div class="tip">💡 직사각형의 높이는 검은 점에서의 함숫값이에요. 검은 점은 x = 1, x = 2에 있어요.</div>`,
+ /* ---------- 구분구적법의 아이디어 (모눈 위의 호수) ---------- */
+ { id:'pond1', view:'shape', title:'1. 울퉁불퉁한 호수의 넓이', setup:{grid:2,showTouch:false},
+   story:`학교 앞 호수를 하늘에서 내려다본 모습이에요. 호수는 원도, 사각형도 아니라서 <b>넓이 공식이 없어요.</b><br>그래서 호수를 모눈종이 위에 올려놓고, <b>호수 안에 완전히 들어간 칸</b>(분홍색)의 넓이를 더해 보기로 했어요.<div class="tip">💡 그림 아래 버튼으로 모눈 크기를 2 m, 1 m, 0.5 m, 0.25 m로 모두 바꿔 보세요. 분홍색 칸의 넓이 합이 어떻게 달라지나요?</div>`,
+   q:{type:'mc', text:'분홍색 칸의 넓이 합이 실제 호수 넓이에 가장 가까운 것은 어느 모눈일까요?', options:['한 변이 2 m인 모눈','한 변이 1 m인 모눈','한 변이 0.5 m인 모눈','한 변이 0.25 m인 모눈'], answer:3},
+   needGrids:4,
+   hints:['모눈을 바꿀 때마다 "완전히 들어간 칸 넓이의 합"이 어떻게 변하는지 보세요.','분홍색으로 채우지 못하고 파랗게 남은 부분이 가장 적은 모눈은 어느 것인가요?'],
+   success:'맞아요! 모눈이 작을수록 분홍색 칸이 호수를 더 빈틈없이 채워서, 넓이 합이 실제 넓이에 가까워져요. 호수의 실제 넓이도 공개됐어요. 비교해 보세요!',
+   reveal:'0.25 m 모눈일 때 분홍색 칸이 호수를 가장 빈틈없이 채우므로 실제 넓이에 가장 가깝다.', onSolve:()=>{S.shapeTrue=true} },
+
+ { id:'pond2', view:'shape', title:'2. 왜 작은 모눈이 더 정확할까?', setup:{grid:2,showTouch:false},
+   story:`2 m 모눈과 0.25 m 모눈을 번갈아 눌러 보세요.<br>호수 <b>가장자리</b>에서 분홍색으로 채우지 못하고 <b>파랗게 남은 부분</b>을 잘 보세요.`,
+   q:{type:'text', text:'모눈을 작게 할수록 칸 넓이의 합이 실제 넓이에 가까워지는 이유를 설명해 보세요.',
+      rubric:[{name:'모눈을 작게(잘게) 나눈다', kw:['작','잘게','촘촘','많이','나누','나눠','쪼개']},
+              {name:'가장자리에서 채우지 못한 빈틈이 줄어든다', kw:['빈틈','틈','남는','남은','못 채','덜 채','가장자리','모서리','테두리','파란','파랗','빈 곳','빈곳','줄어','적어']}],
+      need:2,
+      goal:'모눈을 작게 하면 호수 가장자리에서 칸으로 채우지 못하고 남는 빈틈이 줄어들기 때문에, 칸 넓이의 합이 실제 넓이에 가까워진다.'},
+   hints:['2 m 모눈일 때 호수의 어느 부분이 분홍색으로 채워지지 않았나요?','0.25 m 모눈으로 바꾸면 그 파란 부분은 어떻게 되나요?'],
+   success:'좋은 설명이에요! 작게 나눌수록 가장자리의 <b>빈틈이 줄어들어</b> 실제 넓이에 가까워져요.',
+   reveal:'모눈을 작게 하면 가장자리에서 칸으로 채우지 못하는 빈틈이 줄어들어, 칸 넓이의 합이 실제 넓이에 더 가까워진다.' },
+
+ { id:'pond3', view:'shape', title:'3. 한없이 작게 나눈다면?', setup:{grid:2,showTouch:true},
+   story:`이번엔 <b>걸친 칸도 세어 보기</b>가 켜져 있어요. 노란 칸은 호수에 조금이라도 걸친 칸이에요.<br>· 분홍 칸만 센 넓이 → 실제보다 <b>작은</b> 어림값<br>· 노란 칸까지 센 넓이 → 실제보다 <b>큰</b> 어림값<div class="tip">💡 모눈 크기를 바꿔 가며 두 어림값의 차이가 어떻게 변하는지 보세요.</div>`,
+   q:{type:'text', text:'모눈을 <b>한없이</b> 작게 하면 어떻게 될까요? 이렇게 복잡한 도형의 넓이를 구하는 방법을 친구에게 설명하듯 써 보세요.',
+      rubric:[{name:'넓이를 아는 간단한 도형(작은 사각형)으로 잘게 나눈다', kw:['나누','나눠','쪼개','잘게','사각형','모눈','칸','조각']},
+              {name:'작은 도형들의 넓이를 모두 더한다', kw:['더','합']},
+              {name:'한없이 작게 하면 실제 넓이에 가까워진다', kw:['가까워','같아','한없이','무한','극한','정확','실제 넓이','거의']}],
+      need:3,
+      goal:'도형을 넓이를 아는 간단한 도형(작은 사각형)으로 잘게 나누어 그 넓이를 모두 더하고, 나누는 크기를 한없이 작게 하면 그 합(작은 어림값과 큰 어림값 모두)이 실제 넓이에 한없이 가까워지므로 그 값으로 넓이를 구한다.'},
+   hints:['우리가 한 일을 순서대로 써 보세요. ① 호수를 무엇으로 나눴나요? ② 그 칸들의 넓이를 어떻게 했나요?','모눈이 아주아주 작아지면 분홍 칸 넓이와 노란 칸 넓이는 서로 어떻게 될까요? 실제 넓이와는요?'],
+   success:'훌륭해요! 이렇게 <b>도형을 간단한 도형으로 잘게 나누어 넓이의 합을 구하고, 나누는 크기를 한없이 작게 할 때 그 합이 가까워지는 값으로 넓이를 구하는 방법</b>을 <b>구분구적법</b>이라고 해요. (구분: 나누다, 구적: 넓이를 구하다)',
+   reveal:'작은 사각형으로 잘게 나누어 넓이를 모두 더하고, 사각형을 한없이 작게 하면 그 합이 실제 넓이에 한없이 가까워진다. 이 값으로 넓이를 구한다.' },
+
+ { id:'bridge', title:'4. 이제 곡선 아래 넓이로!', setup:{fi:1,a:0,b:2,n:6,method:'right',showArea:true},
+   story:`이번엔 곡선 <b>y = x²</b>과 x축 사이의 보라색 영역이에요. 호수처럼 넓이 공식이 없죠?<br>그래서 구분구적법을 쓸 거예요. 그런데 이번에는 정사각형 모눈 대신 <b>세로로 긴 직사각형</b>으로 나눴어요.<div class="tip">💡 직사각형의 아랫변이 어디에 놓여 있는지, 높이는 무엇으로 정했는지(검은 점) 보세요.</div>`,
+   q:{type:'mc', text:'곡선 아래 넓이를 구할 때, 정사각형 모눈 대신 세로로 긴 직사각형으로 나누면 좋은 점은 무엇일까요?',
+      options:['직사각형이 모양이 더 예뻐서','아랫변은 x축 위에 같은 폭으로 나란히 놓이고, 높이는 함숫값 f(x)로 바로 정할 수 있어서','직사각형으로 나누면 오차가 전혀 없어서','정사각형으로는 넓이를 절대 구할 수 없어서'], answer:1},
+   hints:['직사각형들의 아랫변은 모두 어디에 붙어 있나요? 폭은 서로 어떤가요?','직사각형 위의 검은 점은 곡선 위의 점이에요. 그 점의 높이(y값)를 무엇이라고 부르나요?'],
+   success:'맞아요! 구간을 똑같이 n개로 나누면 가로는 모두 Δx로 같고, 높이는 함숫값 f(x)로 바로 알 수 있어서 넓이를 계산하기 쉬워요. 이제 이 직사각형으로 곡선 아래 넓이를 구해 볼게요!',
+   reveal:'아랫변은 x축 위에 같은 폭 Δx로 놓이고, 높이는 함숫값 f(x)로 정할 수 있어서 넓이 계산이 편하다.' },
+
+ /* ---------- 그래프에서 정적분 탐구 ---------- */
+ { id:'rect2', title:'5. 공식이 없는 넓이', setup:{fi:1,a:0,b:2,n:2,method:'right',showArea:true}, hideSum:true,
+   story:`곡선 <b>y = x²</b>과 x축, x = 0, x = 2 사이의 <b>보라색 영역</b>을 보세요.<br>호수에서 한 것처럼, 이번에도 넓이를 아는 도형인 <b>직사각형</b>으로 나눠요. 먼저 크게 <b>2개</b>로만 나눠 볼게요.<div class="tip">💡 직사각형의 높이는 검은 점에서의 함숫값이에요. 검은 점은 x = 1, x = 2에 있어요.</div>`,
    q:{type:'num', text:'파란 직사각형 2개의 넓이를 직접 계산해서 더해 보세요.', answer:5, tol:0.001},
    hints:['두 직사각형의 가로 길이는 모두 1이에요. 높이는 f(1) = 1² 과 f(2) = 2² 이에요.','(가로 × 높이)를 각각 구해서 더해요: 1 × 1  +  1 × 4 = ?'],
    success:'맞아요, <b>5</b>예요! 공식이 없는 곡선 아래 넓이도 직사각형으로 <b>어림</b>할 수 있어요. 그런데 5가 실제 넓이와 정말 같을까요?',
    reveal:'왼쪽 직사각형: 가로 1 × 높이 f(1)=1 → 1, 오른쪽 직사각형: 가로 1 × 높이 f(2)=4 → 4, 합 = <b>5</b>' },
 
- { title:'2. 어림한 값은 정확할까?', setup:{fi:1,a:0,b:2,n:2,method:'right',showArea:true},
+ { title:'6. 어림한 값은 정확할까?', setup:{fi:1,a:0,b:2,n:2,method:'right',showArea:true},
    story:`앞에서 직사각형 2개로 어림한 넓이는 <b>5</b>였어요.<div class="tip">💡 직사각형의 윗변과 곡선을 자세히 비교해 보세요.</div>`,
    q:{type:'mc', text:'직사각형 넓이의 합 5는 보라색 실제 넓이보다…', options:['더 크다','더 작다','정확히 같다'], answer:0},
    hints:['직사각형의 윗부분이 곡선 위로 튀어나와 있나요, 곡선 아래에 숨어 있나요?','지금은 각 칸의 "오른쪽 끝"에서 높이를 정했어요. x²은 오른쪽으로 갈수록 커지죠?'],
    success:'정확해요! 튀어나온 부분 때문에 5는 실제보다 <b>커요</b>. 그럼 이 튀어나온 "오차"를 줄이려면 어떻게 해야 할까요?',
    reveal:'오른쪽 끝점으로 높이를 정하면, x²이 증가하므로 직사각형이 곡선 위로 튀어나와 실제보다 <b>크다</b>.' },
 
- { title:'3. 더 잘게 쪼개 보자', setup:{fi:1,a:0,b:2,n:2,method:'right',showArea:true}, needN:50,
+ { id:'limit', title:'7. 더 잘게 쪼개 보자', setup:{fi:1,a:0,b:2,n:2,method:'right',showArea:true}, needN:50,
    story:`아래 <b>n 슬라이더</b>를 움직여 직사각형 개수를 4개, 10개, 50개, 200개로 늘려 보세요. (▶ 버튼을 눌러도 돼요)<br>튀어나온 부분과 <b>S<sub>n</sub> 값</b>이 어떻게 변하는지 지켜보세요.`,
    q:{type:'num', text:'n이 아주 커지면 S<sub>n</sub>은 어떤 수에 점점 가까워질까요? (소수 둘째 자리까지)', answer:8/3, tol:0.02},
    hints:['n = 200일 때의 S<sub>n</sub> 값을 읽어 보세요. n이 커질수록 S<sub>n</sub>은 점점 작아지다가 어떤 값 근처에서 거의 멈춰요.','2.66…처럼 6이 계속 반복되는 수예요. 소수 둘째 자리까지 반올림하면?'],
    success:'훌륭해요! S<sub>n</sub>은 2.666… (= 8/3)에 한없이 가까워져요. 이렇게 <b>가까워지는 값</b>을 '+INT(0,2,'x² dx')+' 로 쓰고, <b>정적분</b>이라고 불러요. 처음 어림한 5보다 훨씬 정확하죠? 이제 그래프 아래 <b>참값</b>이 공개됐어요!',
    reveal:'n = 200이면 S<sub>n</sub> ≈ 2.687, 점점 2.666… ≈ <b>2.67</b> (= 8/3)에 가까워져요.', onSolve:()=>{S.exactUnlocked=true} },
 
- { title:'4. 높이를 다르게 잡으면?', setup:{fi:1,a:0,b:2,n:6,method:'left',showArea:true},
+ { title:'8. 높이를 다르게 잡으면?', setup:{fi:1,a:0,b:2,n:6,method:'left',showArea:true},
    story:`이번에는 각 칸의 <b>왼쪽 끝점</b>에서 높이를 정했어요. 그래프가 어떻게 달라졌나요?<div class="tip">💡 “직사각형 높이를 정하는 점”을 오른쪽/왼쪽으로 바꿔 가며 비교해 보세요.</div>`,
    q:{type:'mc', text:'왼쪽 끝점을 쓰고 n을 아주 크게 하면 S<sub>n</sub>은 어떻게 될까요?', options:['실제 넓이보다 항상 2배 크다','점점 실제 넓이(약 2.67)에 가까워진다','0에 가까워진다','n이 커질수록 계속 커진다'], answer:1},
    hints:['왼쪽 끝점으로 놓고 n을 200까지 올려 보세요. S<sub>n</sub>이 어떤 값 근처로 가나요?','직사각형이 아주 가늘어지면 왼쪽 끝과 오른쪽 끝의 높이 차이는 어떻게 될까요?'],
    success:'맞아요! 처음엔 왼쪽 끝점이 실제보다 작고, 오른쪽 끝점이 크지만 <b>n이 커지면 둘 다 같은 값</b>에 가까워져요. 그래서 정적분 값은 하나로 정해져요.',
    reveal:'왼쪽이든 오른쪽이든 n을 키우면 모두 <b>8/3 (약 2.67)</b>에 가까워진다.' },
 
- { title:'5. Σ 에서 ∫ 로', setup:{fi:1,a:0,b:2,n:20,method:'right',showArea:false},
+ { title:'9. Σ 에서 ∫ 로', setup:{fi:1,a:0,b:2,n:20,method:'right',showArea:false},
    story:`직사각형 넓이의 합은 <span class="formula">S<sub>n</sub> = Σ f(x<sub>k</sub>) · Δx</span> 였어요.<br>n을 한없이 크게 하면 이것이 ${INT(0,2,'x² dx')} 가 돼요.<br>Σ(합)는 길게 늘인 S 모양 ∫ 로 바뀌었어요.`,
    q:{type:'mc', text:'그렇다면 ∫ 기호 뒤의 <b>f(x)</b>와 <b>dx</b>는 직사각형의 무엇과 연결될까요?', options:['f(x): 직사각형 개수,  dx: 넓이의 합','f(x): 높이,  dx: 아주 작아진 가로 길이 Δx','f(x): 가로 길이,  dx: 높이','f(x): 넓이,  dx: x축'], answer:1},
    hints:['S<sub>n</sub> = Σ f(x<sub>k</sub>)·Δx 에서 f(x<sub>k</sub>)는 직사각형의 어디 길이였나요?','Δx = (b − a) ÷ n 이에요. n이 커지면 Δx는 어떻게 되나요? 그것이 dx가 돼요.'],
    success:'정확해요! <b>f(x) × dx = 높이 × 아주 가는 가로</b> = 아주 가는 직사각형 하나의 넓이. 이것을 a부터 b까지 <b>모두 더한 것(∫)</b>이 정적분이에요.',
    reveal:'f(x)는 높이, dx는 한없이 작아진 가로 길이 Δx.' },
 
- { title:'6. x축 아래에 있으면?', setup:{fi:3,a:0,b:2,n:10,method:'mid',showArea:true},
+ { id:'neg', title:'10. x축 아래에 있으면?', setup:{fi:3,a:0,b:2,n:10,method:'mid',showArea:true},
    story:`함수 <b>y = −x + 1</b>은 x = 1 이후로 x축 <b>아래</b>로 내려가요. 빨간 직사각형을 보세요.<div class="tip">💡 빨간 직사각형의 높이 f(x)는 양수일까요, 음수일까요? 그러면 높이 × 가로는?</div>`,
    q:{type:'num', text:INT(0,2,'(−x + 1) dx')+' 의 값을 예상해 보세요.', answer:0, tol:0.001},
    hints:['파란 삼각형(0~1)과 빨간 삼각형(1~2)의 넓이를 각각 구해 보세요.','빨간 부분은 f(x)가 음수라서 f(x)·Δx도 음수예요. 파란 부분(+)과 빨간 부분(−)을 더하면?'],
    success:'맞아요, <b>0</b>이에요! 그래프 아래 S<sub>n</sub>과 참값도 확인해 보세요. 넓이가 분명히 있는데 왜 0이 될까요? 다음 단계에서 설명해 봐요.',
    reveal:'파란 삼각형 +1/2, 빨간 삼각형 −1/2 → 합은 <b>0</b>' },
 
- { title:'7. 왜 0이 됐을까?', setup:{fi:3,a:0,b:2,n:10,method:'mid',showArea:true},
+ { title:'11. 왜 0이 됐을까?', setup:{fi:3,a:0,b:2,n:10,method:'mid',showArea:true},
    story:`앞 단계에서 색칠된 부분이 분명히 있는데, 정적분 값은 0이었어요.`,
    q:{type:'text', text:'정적분 값이 0이 된 이유를 자신의 말로 설명해 보세요. (한두 문장이면 충분해요)',
       rubric:[{name:'x축 아래 부분은 음수(−)로 계산된다', kw:['음수','마이너스','-','−','음의','아래','빼','작은 값']},
@@ -541,7 +675,7 @@ const MISSIONS = [
    success:'좋은 설명이에요! 정적분은 그냥 넓이가 아니라 <b>x축 위는 +, 아래는 −로 계산한 넓이의 합</b>이에요.',
    reveal:'x축 아래는 f(x)가 음수라 −로 더해지고, 위(+1/2)와 아래(−1/2)가 크기가 같아 상쇄되어 0이 된다.' },
 
- { title:'8. 정적분을 내 말로 정리하기', setup:{fi:5,a:-1,b:2,n:12,method:'mid',showArea:true},
+ { title:'12. 정적분을 내 말로 정리하기', setup:{fi:5,a:-1,b:2,n:12,method:'mid',showArea:true},
    story:`지금까지 탐구한 내용을 떠올려 보세요. 그래프를 자유롭게 바꿔 보며 생각을 정리해도 좋아요.`,
    q:{type:'text', text:INT('a','b','f(x) dx')+' 는 무엇을 뜻할까요? 미적분을 모르는 친구에게 설명하듯 써 보세요.',
       rubric:[{name:'구간을 쪼개 직사각형을 만든다', kw:['직사각형','사각형','쪼개','나누','잘게','막대']},
@@ -555,7 +689,8 @@ const MISSIONS = [
    reveal:'구간 [a, b]를 잘게 쪼개 직사각형 넓이 f(x)·Δx를 모두 더하고, 개수를 한없이 늘렸을 때 가까워지는 값.' },
 ];
 
-const STORE='defint_progress_v1';
+const STORE='defint_progress_v2';
+const idxOf=id=>MISSIONS.findIndex(m=>m.id===id);
 let P = loadProg();
 function loadProg(){try{return JSON.parse(localStorage.getItem(STORE))||{done:[],cur:0}}catch(e){return {done:[],cur:0}}}
 function saveProg(){try{localStorage.setItem(STORE,JSON.stringify(P))}catch(e){}}
@@ -566,11 +701,11 @@ function updateGolfBtn(){
   const on=golfUnlocked(), g=$('golfBtn');
   g.textContent=on?'⛳ 정적분 골프':'🔒 보너스 게임';
   g.style.background=on?'#16a34a':''; g.style.borderColor=on?'#16a34a':'';
-  g.title=on?'보너스 게임: 정적분 골프':'8단계를 모두 마치면 열려요';
+  g.title=on?'보너스 게임: 정적분 골프':`탐구 ${MISSIONS.length}단계를 모두 마치면 열려요`;
 }
 $('golfBtn').onclick=()=>{
   if(golfUnlocked()) openGolf();
-  else alert(`🔒 보너스 게임은 탐구 8단계를 모두 마치면 열려요!\n(지금 ${P.done.length}/${MISSIONS.length}단계 완료)`);
+  else alert(`🔒 보너스 게임은 탐구 ${MISSIONS.length}단계를 모두 마치면 열려요!\n(지금 ${P.done.length}/${MISSIONS.length}단계 완료)`);
 };
 function renderProg(){
   updateGolfBtn();
@@ -588,8 +723,10 @@ function renderProg(){
 }
 function loadMission(){
   const m=MISSIONS[P.cur]; tries=0; selOpt=null;
-  Object.assign(S,m.setup); S.maxN=S.n; S.hideSum=!!m.hideSum && !P.done.includes(P.cur);
-  if(P.done.includes(2)) S.exactUnlocked=true;
+  S.view=m.view||'graph'; Object.assign(S,m.setup); S.maxN=S.n; S.hideSum=!!m.hideSum && !P.done.includes(P.cur);
+  if(S.view==='shape') S.gridsSeen=new Set([S.grid]);
+  if(P.done.includes(idxOf('pond1'))) S.shapeTrue=true;
+  if(P.done.includes(idxOf('limit'))) S.exactUnlocked=true;
   refresh(); renderProg();
   const q=m.q; let qhtml='';
   if(q.type==='num') qhtml=`<input type="text" id="ans" placeholder="답을 입력하세요 (예: 0.5 또는 1/2)">`;
@@ -662,19 +799,20 @@ async function submit(m){
     if(Math.abs(v-q.answer)<=q.tol){ showFb('good','✅ '+m.success); solved(m); }
     else{
       let msg='🤔 아직 아니에요.';
-      if(P.cur===0 && Math.abs(v-4)<1e-6) msg='🤔 오른쪽 직사각형 하나만 계산했나요? 직사각형은 2개예요.';
-      if(P.cur===0 && Math.abs(v-1)<1e-6) msg='🤔 왼쪽 직사각형 하나만 계산했나요? 직사각형은 2개예요.';
-      if(P.cur===0 && Math.abs(v-3)<1e-6) msg='🤔 높이를 x값 그대로(1과 2) 썼나요? 높이는 x가 아니라 f(x) = x² 이에요.';
-      if(P.cur===2 && v>2.55 && v<2.8) msg='🤔 아주 가까워요! 조금만 더 정확하게 생각해 볼까요? n을 더 크게 하면 어떤 수에 다가가나요?';
-      if(P.cur===2 && Math.abs(v-S.maxN)<1e-6) msg='🤔 그건 n의 값이에요. 우리가 볼 것은 직사각형 넓이의 합 S<sub>n</sub>이에요.';
-      if(P.cur===5 && Math.abs(v-1)<1e-6) msg='🤔 넓이를 모두 +로 더했군요! 그런데 빨간 직사각형의 높이 f(x)는 양수일까요?';
+      if(m.id==='rect2' && Math.abs(v-4)<1e-6) msg='🤔 오른쪽 직사각형 하나만 계산했나요? 직사각형은 2개예요.';
+      if(m.id==='rect2' && Math.abs(v-1)<1e-6) msg='🤔 왼쪽 직사각형 하나만 계산했나요? 직사각형은 2개예요.';
+      if(m.id==='rect2' && Math.abs(v-3)<1e-6) msg='🤔 높이를 x값 그대로(1과 2) 썼나요? 높이는 x가 아니라 f(x) = x² 이에요.';
+      if(m.id==='limit' && v>2.55 && v<2.8) msg='🤔 아주 가까워요! 조금만 더 정확하게 생각해 볼까요? n을 더 크게 하면 어떤 수에 다가가나요?';
+      if(m.id==='limit' && Math.abs(v-S.maxN)<1e-6) msg='🤔 그건 n의 값이에요. 우리가 볼 것은 직사각형 넓이의 합 S<sub>n</sub>이에요.';
+      if(m.id==='neg' && Math.abs(v-1)<1e-6) msg='🤔 넓이를 모두 +로 더했군요! 그런데 빨간 직사각형의 높이 f(x)는 양수일까요?';
       wrong(m,msg);
     }
   }
   if(q.type==='mc'){
     if(selOpt===null){showFb('info','보기 중 하나를 골라 볼까요?');return}
+    if(m.needGrids && S.gridsSeen.size<m.needGrids && selOpt!==q.answer){showFb('info',`먼저 모눈 크기 버튼 4개를 모두 눌러 보면서 분홍색 칸 넓이의 합을 비교해 볼까요? (지금 ${S.gridsSeen.size}개 확인)`);return}
     if(selOpt===q.answer){ showFb('good','✅ '+m.success); solved(m); }
-    else wrong(m,'🤔 다시 생각해 볼까요? 그래프를 직접 움직여 보면 단서를 찾을 수 있어요.');
+    else wrong(m,S.view==='shape'?'🤔 다시 생각해 볼까요? 모눈 크기를 바꿔 가며 그림을 비교해 보면 단서를 찾을 수 있어요.':'🤔 다시 생각해 볼까요? 그래프를 직접 움직여 보면 단서를 찾을 수 있어요.');
   }
   if(q.type==='text'){
     const txt=$('ans').value.trim();
@@ -748,7 +886,10 @@ async function sendChat(){
   const t=$('chatIn').value.trim(); if(!t) return; $('chatIn').value='';
   addMsg('me',t); const w=addMsg('ai','생각 중…'); $('chatSend').disabled=true;
   const m=MISSIONS[P.cur];
-  const context=`탐구 단계: ${m.title} / 질문: ${m.q.text.replace(/<[^>]+>/g,' ')} / 함수 ${FUNCS[S.fi].label}, 구간 [${S.a}, ${S.b}], n=${S.n}, 높이 기준: ${S.method}, S_n=${fmt(riemann().s,4)}`;
+  const scene = S.view==='shape'
+    ? (()=>{const d=pondCells(S.grid);return `모눈 위의 호수 활동(구분구적법 도입): 모눈 한 변 ${S.grid} m, 호수 안에 완전히 들어간 칸 ${d.inner}칸(넓이 합 ${nfm(d.inner*S.grid*S.grid)} m²), 걸친 칸까지 ${d.touch}칸`;})()
+    : `함수 ${FUNCS[S.fi].label}, 구간 [${S.a}, ${S.b}], n=${S.n}, 높이 기준: ${S.method}, S_n=${fmt(riemann().s,4)}`;
+  const context=`탐구 단계: ${m.title} / 질문: ${m.q.text.replace(/<[^>]+>/g,' ')} / ${scene}`;
   chatHist.push({role:'user',text:t});
   try{
     const j=await api('chat',{history:chatHist.slice(-10),context});
@@ -931,7 +1072,11 @@ const Tour=(function(){
 
 const MAIN_TOUR=[
   {title:'정적분 탐구실에 온 걸 환영해요! 👋',
-   body:'곡선 아래를 <b>직사각형으로 쪼개 보면서</b> 정적분의 뜻을 스스로 찾아가는 곳이에요.<br>주요 기능을 1분 안에 둘러볼게요. (키보드 ← → 키로도 넘길 수 있어요)'},
+   body:'복잡한 도형을 <b>잘게 쪼개 보면서</b> 정적분의 뜻을 스스로 찾아가는 곳이에요.<br>주요 기능을 1분 안에 둘러볼게요. (키보드 ← → 키로도 넘길 수 있어요)'},
+  {el:'#shapeCv', title:'모눈 위의 호수 (1~3단계)',
+   body:'먼저 넓이 공식이 없는 <b>울퉁불퉁한 호수</b>의 넓이를 모눈으로 어림해 봐요. <b style="color:#db2777">분홍색</b>은 호수 안에 완전히 들어간 칸이에요.'},
+  {el:'#gridBtns', title:'모눈 크기 바꾸기',
+   body:'모눈 크기를 바꾸면 칸 넓이의 합이 어떻게 달라지는지 비교해 보세요. 🤔 언제 실제 넓이에 가장 가까워질까요?'},
   {el:'#cv', title:'그래프 화면',
    body:'보라색 곡선 아래를 직사각형이 채우고 있어요.<br><b style="color:#2563eb">파란색</b>은 x축 위, <b style="color:#dc2626">빨간색</b>은 x축 아래 직사각형이에요.'},
   {el:'.controls', title:'조작판',
@@ -939,15 +1084,15 @@ const MAIN_TOUR=[
   {el:'#animBtn', title:'n을 점점 늘려보기',
    body:'누르면 직사각형이 1개부터 200개까지 저절로 늘어나요. 직사각형이 곡선에 어떻게 가까워지는지 지켜보세요.'},
   {el:'.readout', title:'계산 결과',
-   body:'직사각형 하나의 가로 <b>Δx</b>와 넓이의 합 <b>S<sub>n</sub></b>이 바로 계산돼요.<br>정적분 <b>참값</b>은 처음엔 🔒 잠겨 있고, 탐구 3단계를 해결하면 열려요.'},
-  {el:'#prog', title:'탐구 단계 (8단계)',
-   body:'동그라미 하나가 한 단계예요. 해결하면 <b style="color:#059669">초록색</b>이 되고 다음 단계가 열려요. 해결한 단계는 눌러서 다시 볼 수 있어요.'},
+   body:'직사각형 하나의 가로 <b>Δx</b>와 넓이의 합 <b>S<sub>n</sub></b>이 바로 계산돼요.<br>정적분 <b>참값</b>은 처음엔 🔒 잠겨 있고, 탐구 7단계를 해결하면 열려요.'},
+  {el:'#prog', title:'탐구 단계 (12단계)',
+   body:'동그라미 하나가 한 단계예요. <b>1~4단계</b>에서는 호수 모눈으로 넓이를 구하는 아이디어를 찾고, <b>5단계부터</b> 그래프에서 정적분을 탐구해요.<br>해결하면 <b style="color:#059669">초록색</b>이 되고 다음 단계가 열려요.'},
   {el:'.qbox', title:'질문에 답하기',
    body:'답을 쓰고 <b>제출하기</b>를 누르면 바로 피드백이 나와요.<br>막히면 <b>💡 힌트</b>, 3번 틀리면 <b>풀이 보기</b>가 나타나요. 틀려도 괜찮아요!'},
   {el:'#chatCard', title:'AI 도우미',
    body:'궁금한 것을 물어보면 AI가 <b>정답 대신 생각할 실마리</b>를 줘요. (선생님이 AI를 켰을 때만 보여요)'},
   {el:'#golfBtn', title:'보너스 게임 ⛳',
-   body:'8단계를 모두 마치면 <b>정적분 골프</b>가 열려요. 배운 정적분으로 골프를 쳐 보세요!'},
+   body:'모든 탐구 단계를 마치면 <b>정적분 골프</b>가 열려요. 배운 정적분으로 골프를 쳐 보세요!'},
   {el:'#tourBtn', title:'안내 다시 보기',
    body:'이 안내는 언제든 <b>ⓘ 사용 안내</b> 버튼으로 다시 볼 수 있어요.<br>(<b>⚙ 관리자</b>는 선생님용 설정이에요.) 그럼 1단계부터 시작해 볼까요?'},
 ];
