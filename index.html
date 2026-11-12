@@ -41,6 +41,14 @@ select{font-family:inherit;font-size:14px;padding:6px 8px;border-radius:8px;bord
 .chip.locked .v{color:#94a3b8}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
 .formula{font-family:"Cambria Math","Times New Roman",serif;font-size:17px}
+.fbox{margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid var(--line);border-radius:10px}
+.fbox .formula{font-size:19px;line-height:1.9}
+.fbox .formula i{font-style:italic}
+.fbox sub{font-size:.7em}
+.fbox .nw{white-space:nowrap}
+.bigop{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1;margin:0 4px 0 2px}
+.bigop .bo-s{font-size:1.45em;line-height:1}
+.bigop .bo-t,.bigop .bo-b{font-size:.58em;font-style:italic}
 .int{font-size:1.5em;vertical-align:-.15em}
 .lim{display:inline-flex;flex-direction:column;font-size:.65em;vertical-align:middle;line-height:1.1;margin-left:-2px;margin-right:2px}
 .progress{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
@@ -221,7 +229,7 @@ input[type=range]{height:30px;accent-color:var(--blue)}
       <div class="chip"><span class="k">직사각형 넓이의 합 S<sub>n</sub></span><span class="v" id="sOut"></span></div>
       <div class="chip locked" id="exactChip"><span class="k">정적분 값 (참값)</span><span class="v" id="exOut">🔒 탐구 3단계 후 공개</span></div>
     </div>
-    <div class="row formula" id="formulaRow"></div>
+    <div class="fbox" id="formulaRow"></div>
   </section>
 
   <!-- 오른쪽: 탐구 -->
@@ -458,7 +466,8 @@ function refresh(){
   if(S.exactUnlocked){$('exactChip').classList.remove('locked');$('exOut').textContent=fmt(exact(),4);}
   else{$('exactChip').classList.add('locked');$('exOut').textContent='🔒 탐구 3단계 후 공개';}
   const mname={left:'왼쪽 끝점',right:'오른쪽 끝점',mid:'가운데 점'}[S.method];
-  $('formulaRow').innerHTML=`S<sub>n</sub> = Σ (높이) × (가로) = Σ f(x<sub>k</sub>)·Δx &nbsp;<span class="small">— 높이는 각 칸의 ${mname}에서의 함숫값</span>`;
+  const SIG='<span class="bigop"><span class="bo-t">n</span><span class="bo-s">Σ</span><span class="bo-b">k=1</span></span>';
+  $('formulaRow').innerHTML=`<div class="formula"><span class="nw"><i>S</i><sub><i>n</i></sub></span> <span class="nw">= ${SIG}(높이) × (가로)</span> <span class="nw">= ${SIG}<i>f</i>(<i>x</i><sub><i>k</i></sub>) · Δ<i>x</i></span></div><div class="small">— 높이 <i>f</i>(<i>x</i><sub><i>k</i></sub>)는 <i>k</i>번째 칸의 ${mname}에서의 함숫값, 가로 Δ<i>x</i>는 모든 칸이 같아요.</div>`;
   draw();
 }
 FUNCS.forEach((F,i)=>{const o=document.createElement('option');o.value=i;o.textContent=F.label;$('fSel').appendChild(o)});
