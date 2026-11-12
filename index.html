@@ -699,7 +699,7 @@ function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'
 /* ====================== AI 서버(구글 앱스크립트) 연동 ======================
    API 키와 교사 PIN은 앱스크립트 서버에만 저장돼요. 이 페이지에는 키가 전혀 들어 있지 않아요.
    ▼ 앱스크립트를 '웹 앱'으로 배포한 뒤 받은 주소(…/exec)를 아래에 붙여 넣으세요. */
-const GAS_URL = '';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzHK8VjpkGZpqCWMyXSBm0dUVJMRM6mz1bW7E8JMxDoRlCTkkg0FQJRvYGwXg1NHKi2ow/exec';
 /* ================================================================== */
 
 function serverUrl(){ if(GAS_URL) return GAS_URL; try{return localStorage.getItem('defint_gas_url')||''}catch(e){return ''} }
